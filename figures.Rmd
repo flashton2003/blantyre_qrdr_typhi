@@ -18,27 +18,39 @@ library(broom)
 library(lubridate)
 ```
 
+## Key variables
+
+```{r KeyVariables}
+tyvac_pop <- 27882 # this is per protocol, intention to treat pop was 28,130
+strataa_pop <- 102242 # the population size at the final census (aug 2018-April 2019)
+```
+
+## Import data
+
+```{r ImportData}
+
+line_list_handle <- "~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.04.08/2022.04.08 line list.xlsx"
+
+all_typhi <- read_excel("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.04.08/2022.04.08 line list.xlsx", col_types = c("text", "text", "text", 
+        "text", "date", "text", "text", "numeric", 
+        "text", "text", "text", "text", "text", 
+        "text", "text", "text", "numeric", 
+        "text", "text", "text", "text", "text", 
+        "text", "text"))
+
+all_typhi$Month <- as.Date(cut(all_typhi$`Properly formatted date`, breaks = "month"))
+
+
+```
+
 ## Figure 1
 
 This is a figure of the number of S. Typhi at QECH that were cipro sensitive and DCS.
 
 ```{r Figure1}
-line_list_handle <- "~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.04.08/2022.04.08 line list.xlsx"
-
-all_typhi <- read_excel(line_list_handle, sheet = "all typhi", col_types = c("text", "text", "text", 
-                                                                             "text", "date", "text", "text", "numeric", 
-                                                                             "text", "text", "text", "text", "text", 
-                                                                             "text", "text", "text", "numeric", 
-                                                                             "text", "text", "text", "text", "text", 
-                                                                             "text"))
 
 pef_tested_qech_typhi <- all_typhi %>% filter(grepl('QECH', Study)) %>% filter(!is.na(`Cipro MIC res?`))
-
-pef_tested_qech_typhi$Month <- as.Date(cut(pef_tested_qech_typhi$`Properly formatted date`, breaks = "month"))
-
-
 pef_by_month <- pef_tested_qech_typhi %>% group_by(Month, `Cipro MIC res?`) %>% summarise(n = n())
-
 pef_by_month <- pef_by_month %>% filter(Month >= "2019-01-01")
 
 ggplot(pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`)) + 
@@ -52,19 +64,31 @@ ggplot(pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`, label = n)) 
   theme(axis.text=element_text(size=12), axis.title=element_text(size=14))
 ```
 
-## Figure 2
+## Numbers for Figure 1
 
 ```{r}
-d <- read_csv('/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/epi_analysis/results/2022.06.17/2022.06.17.combined_typhi_data.csv')
+total_qech_typhi_tested <- sum(pef_by_month$n)
+total_qech_typhi_dcs_or_r <- filter(pef_by_month, `Cipro MIC res?` == 'DCS' | `Cipro MIC res?` == 'R' ) %>% pull(n) %>% sum
+```
+
+There were `r total_qech_typhi_tested` total qech typhi tested, and `r total_qech_typhi_dcs_or_r` DCS or R.
+
+
+## Figure 2
+
+```{r Figure2}
+
+d <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/epi_analysis/results/2022.06.17/2022.06.17.combined_typhi_data.csv", col_types = cols(Month = col_date(format = "%d/%m/%Y")))
+
 d <- d |>
   mutate(date = ymd(Month)) |>
   arrange(date) |>
   mutate(month_number = row_number()) |>
   mutate(total_cases = no_qrdr + any_qrdr) |>
-  rename(`Cipro\nprescriptions` = `elible_ciprofloxacin prescribed`)
+  rename(`Cipro prescriptions` = `elible_ciprofloxacin prescribed`)
 
 e <- d |>
-  dplyr::select(date, `Cipro\nprescriptions`, no_qrdr, any_qrdr, total_cases) |>
+  dplyr::select(date, `Cipro prescriptions`, no_qrdr, any_qrdr, total_cases) |>
   pivot_longer(-date)
 
 e |>
@@ -80,4 +104,47 @@ e |>
   scale_x_date(breaks = scales::breaks_pretty(20)) +
   scale_y_continuous(breaks = scales::breaks_pretty(5))
 ```
+
+
+## Incidence rates
+
+```{r}
+
+tyvac_cases <- all_typhi %>% filter(Study == 'TyVAC' & `TyVAC site` == 'Ndirande' & `Properly formatted date` < '2020-01-01' & !is.na(`Sequenced?`)) %>% filter(!grepl("^Ignore", Note))
+
+tyvac_by_month <- tyvac_cases %>% group_by(Month) %>% summarise(n = n())
+tyvac_by_month$per100000 <- (tyvac_by_month$n / tyvac_pop) * 100000
+
+strataa_cases <- all_typhi %>% filter(Study == 'STRATAA' & `Properly formatted date` < '2020-01-01' & !is.na(`Sequenced?`))
+strataa_by_month <- strataa_cases  %>% group_by(Month) %>% summarise(n = n())
+strataa_by_month$per100000 <- (strataa_by_month$n / strataa_pop) * 100000
+
+combined_by_month <- data.frame(Month = seq(as.Date("2016-10-01"), as.Date("2019-11-01"), "months")) 
+#combined_by_month <- combined_by_month %>% rename(V1 = Month)
+combined_by_month <- left_join(combined_by_month, tyvac_by_month, by = 'Month') %>% rename(tyvac_n = n, tyvac_per100000 = per100000)
+combined_by_month <- left_join(combined_by_month, strataa_by_month, by = 'Month') %>% rename(strataa_n = n, strataa_per100000 = per100000)
+
+
+combined_by_month[is.na(combined_by_month)] <- 0
+combined_by_month$combined_incidence <-  combined_by_month$strataa_per100000 + combined_by_month$tyvac_per100000
+```
+
+
+## STRATAA cipro prescriptions
+
+```{r}
+
+strataa_prescriptions <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.01 strataa_ndirande_prescribed from James Meiring.csv", 
+    col_types = cols(ps12_dov = col_datetime(format = "%d/%m/%Y %H:%M")))
+
+strataa_prescriptions$Month <- as.Date(cut(strataa_prescriptions$ps12_dov, breaks = "month"))
+
+strataa_prescriptions <- strataa_prescriptions %>% filter(ps44_cipro == 1)
+
+strpresc_by_month <- strataa_prescriptions %>% group_by(Month) %>% summarise(n = n())
+
+ggplot(strataa_prescriptions)
+
+```
+
 
