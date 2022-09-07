@@ -21,6 +21,7 @@ library(glmmTMB)
 library(tsibble)
 library(feasts)
 library(trending)
+library(patchwork)
 ```
 
 ## Key variables
@@ -40,7 +41,7 @@ tyvac_strataa_end <- as.Date('2019-10-01')
 
 line_list_handle <- "~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.04.08/2022.04.08 line list.xlsx"
 
-all_typhi <- read_excel("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.04.08/2022.04.08 line list.xlsx", col_types = c("text", "text", "text", 
+all_typhi <- read_excel("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.04.08/2022.04.08 line list.xlsx", col_types = c("text", "text", "text", "text",
         "text", "date", "text", "text", "numeric", 
         "text", "text", "text", "text", "text", 
         "text", "text", "text", "numeric", 
@@ -48,7 +49,7 @@ all_typhi <- read_excel("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typh
         "text", "text"))
 
 all_typhi$Month <- as.Date(cut(all_typhi$`Properly formatted date`, breaks = "month"))
-all_typhi <- all_typhi %>% mutate(any_qrdr = ifelse(is.na(QRDR), NA, "QRDR"))
+all_typhi <- all_typhi %>% mutate(any_qrdr = ifelse(is.na(QRDR), NA, "QRDR")) %>% filter(!grepl("^Ignore", Note))
 
 
 strataa_prescriptions <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.01 strataa_ndirande_prescribed from James Meiring.csv", 
@@ -77,7 +78,7 @@ todo:
 
 
 ```{r}
-tyvac_cases <- all_typhi %>% filter(Study == 'TyVAC' & `TyVAC site` == 'Ndirande' & `Properly formatted date` < '2020-01-01' & !is.na(`Sequenced?`)) %>% filter(!grepl("^Ignore", Note))
+tyvac_cases <- all_typhi %>% filter(Study == 'TyVAC' & `TyVAC site` == 'Ndirande' & `Properly formatted date` < '2020-01-01' & !is.na(`Sequenced?`))
 tyvac_cases_by_month <- tyvac_cases %>% group_by(Month) %>% summarise(tyvac_n = n())
 
 strataa_cases <- all_typhi %>% filter(grepl('STRATAA', Study) & `Properly formatted date` < '2020-01-01' & !is.na(`Sequenced?`))
@@ -100,10 +101,6 @@ combined_cases_by_month$total_typhoid_per100000 <- (combined_cases_by_month$tota
 ```
 
 ## QRDR typhi incidence
-
-two ways of getting the qrdr:
-1. group by qrdr, and the pivot wider (or something)
-2. filter by qrdr, make new count tables, do some joins
 
 ```{r}
 
@@ -266,33 +263,29 @@ There were `r total_qech_typhi_tested` total qech typhi tested, and `r total_qec
 
 ## Figure 2
 
-```{r Figure2}
+```{r Figure2.v2}
 
-d <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/epi_analysis/results/2022.06.17/2022.06.17.combined_typhi_data.csv", col_types = cols(Month = col_date(format = "%d/%m/%Y")))
+typhoid_graph <- ggplot(everything_for_model, aes(x = Month, y = total_typhoid_per100000)) + 
+  geom_bar(stat = "identity") + 
+  ylab('Sequencing confirmed typhoid\nper 100,000 people')
 
-d <- d |>
-  mutate(date = ymd(Month)) |>
-  arrange(date) |>
-  mutate(month_number = row_number()) |>
-  mutate(total_cases = no_qrdr + any_qrdr) |>
-  rename(`Cipro prescriptions` = `elible_ciprofloxacin prescribed`)
+cipro_prescrip_graph <- ggplot(everything_for_model, aes(x = Month, y = total_prescrip_per_100000)) + 
+  geom_bar(stat = "identity") + 
+  ylab('Ciprofloxacin prescriptions\nper 100,000 people')
 
-e <- d |>
-  dplyr::select(date, `Cipro prescriptions`, no_qrdr, any_qrdr, total_cases) |>
-  pivot_longer(-date)
+qrdr_graph <- ggplot(everything_for_model, aes(x = Month, y = total_qrdr_incidence_per_100000)) + 
+  geom_bar(stat = "identity") +
+  ylab('S. Typhi with QRDR mutations\nper 100,000 people')
 
-e |>
-  ggplot() +
-  geom_col(aes(x=date, y=value, fill=name)) +
-  facet_grid(name~., scales = "free_y") +
-  theme_linedraw() +
-  scale_fill_brewer(palette="Set1") +
-  theme(legend.position = "none",
-        axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5)) +
-  labs(x="Month",
-       y="Count") +
-  scale_x_date(breaks = scales::breaks_pretty(20)) +
-  scale_y_continuous(breaks = scales::breaks_pretty(5))
+qrdr_graph
+
+bc_graph <- ggplot(everything_for_model, aes(x = Month, y = total_bc_per_100000)) + 
+  geom_bar(stat = "identity") +
+  ylab('Number of blood cultures\nper 100,000 people')
+
+
+p <- typhoid_graph / cipro_prescrip_graph / qrdr_graph / bc_graph
+
 ```
 
 
