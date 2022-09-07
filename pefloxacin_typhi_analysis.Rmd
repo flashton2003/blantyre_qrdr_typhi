@@ -48,18 +48,40 @@ all_typhi <- read_excel("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typh
         "text", "text"))
 
 all_typhi$Month <- as.Date(cut(all_typhi$`Properly formatted date`, breaks = "month"))
+all_typhi <- all_typhi %>% mutate(any_qrdr = ifelse(is.na(QRDR), NA, "QRDR"))
+
+
+strataa_prescriptions <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.01 strataa_ndirande_prescribed from James Meiring.csv", 
+    col_types = cols(ps12_dov = col_datetime(format = "%d/%m/%Y %H:%M")))
+strataa_prescriptions$Month <- as.Date(cut(strataa_prescriptions$ps12_dov, breaks = "month"))
+strataa_prescriptions <- strataa_prescriptions %>% filter(ps44_cipro == 1)
+
+tyvacpresc_by_month <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.08 cipro prescriptions.csv", col_types = cols(Month = col_date(format = "%d/%m/%Y")))
+
+
+tyvac_blood_cultures_by_month <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.11.12/TyVAC monthly BC.csv", col_types = cols(date = col_date(format = "%Y-%m-%d"))) %>% rename('Month' = 'date', 'tyvac_bc_n' = 'BC collected')
+
+
+strataa_blood_cultures <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.11.12/STRATAA.ps_enrolment.date_only.csv", col_types = cols(ps12_dov = col_date(format = "%Y-%m-%d")))
+strataa_blood_cultures$Month <- as.Date(cut(strataa_blood_cultures$ps12_dov, breaks = "month"))
+
+
 
 
 ```
 
 ## Sequencing confirmed typhoid incidence rate
 
-```{r}
+todo:
+* make sure excluding multiple isolates from the same person
 
+
+```{r}
 tyvac_cases <- all_typhi %>% filter(Study == 'TyVAC' & `TyVAC site` == 'Ndirande' & `Properly formatted date` < '2020-01-01' & !is.na(`Sequenced?`)) %>% filter(!grepl("^Ignore", Note))
 tyvac_cases_by_month <- tyvac_cases %>% group_by(Month) %>% summarise(tyvac_n = n())
 
 strataa_cases <- all_typhi %>% filter(grepl('STRATAA', Study) & `Properly formatted date` < '2020-01-01' & !is.na(`Sequenced?`))
+
 strataa_cases_by_month <- strataa_cases  %>% group_by(Month) %>% summarise(strataa_n = n())
 
 #cases_start <- min(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
@@ -73,27 +95,45 @@ combined_cases_by_month <- left_join(combined_cases_by_month, strataa_cases_by_m
 combined_cases_by_month[is.na(combined_cases_by_month)] <- 0
 
 combined_cases_by_month$total_n <- combined_cases_by_month$tyvac_n + combined_cases_by_month$strataa_n
-combined_cases_by_month$total_incidence_per100000 <- (combined_cases_by_month$total_n / strataa_pop) * 100000
+combined_cases_by_month$total_typhoid_per100000 <- (combined_cases_by_month$total_n / strataa_pop) * 100000
+
+```
+
+## QRDR typhi incidence
+
+two ways of getting the qrdr:
+1. group by qrdr, and the pivot wider (or something)
+2. filter by qrdr, make new count tables, do some joins
+
+```{r}
+
+strataa_qrdr <- strataa_cases %>% filter(any_qrdr == 'QRDR')
+strataa_qrdr_cases_by_month <- strataa_qrdr  %>% group_by(Month) %>% summarise(strataa_qrdr_n = n())
+
+tyvac_qrdr <- tyvac_cases %>% filter(any_qrdr == 'QRDR')
+tyvac_qrdr_cases_by_month <- tyvac_qrdr  %>% group_by(Month) %>% summarise(tyvac_qrdr_n = n())
+
+combined_qrdr_cases_by_month <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months")) 
+
+combined_qrdr_cases_by_month <- left_join(combined_qrdr_cases_by_month, strataa_qrdr_cases_by_month, by = 'Month')
+combined_qrdr_cases_by_month <- left_join(combined_qrdr_cases_by_month, tyvac_qrdr_cases_by_month, by = 'Month')
+
+combined_qrdr_cases_by_month[is.na(combined_qrdr_cases_by_month)] <- 0
+
+combined_qrdr_cases_by_month$total_qrdr_n <- combined_qrdr_cases_by_month$strataa_qrdr_n + combined_qrdr_cases_by_month$tyvac_qrdr_n
+
+combined_qrdr_cases_by_month$total_qrdr_incidence_per_100000 <- (combined_qrdr_cases_by_month$total_qrdr_n / strataa_pop) * 100000
 
 ```
 
 ## cipro prescription incidence rates
 
 ```{r}
-
-strataa_prescriptions <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.01 strataa_ndirande_prescribed from James Meiring.csv", 
-    col_types = cols(ps12_dov = col_datetime(format = "%d/%m/%Y %H:%M")))
-
-strataa_prescriptions$Month <- as.Date(cut(strataa_prescriptions$ps12_dov, breaks = "month"))
-strataa_prescriptions <- strataa_prescriptions %>% filter(ps44_cipro == 1)
 strpresc_by_month <- strataa_prescriptions %>% group_by(Month) %>% summarise(strataa_prescrip_n = n())
 #ggplot(strataa_prescriptions)
 #strpresc_by_month$strataa_prescrip_per100000 <- (strpresc_by_month$n / strataa_pop) * 100000
 
-tyvacpresc_by_month <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.08 cipro prescriptions.csv", col_types = cols(Month = col_date(format = "%d/%m/%Y")))
-
 combined_prescrip_by_month <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months")) 
-
 combined_prescrip_by_month <- left_join(combined_prescrip_by_month, tyvacpresc_by_month, by = 'Month')
 combined_prescrip_by_month <- left_join(combined_prescrip_by_month, strpresc_by_month, by = 'Month')
 # currently only including prescriptions to eligible tyvac participants, not ineligible
@@ -113,6 +153,23 @@ combined_prescrip_by_month$total_prescrip_per_100000 <- (combined_prescrip_by_mo
 
 ```
 
+## Getting the number of blood cultures
+
+```{r}
+
+strataa_blood_cultures_by_month <- strataa_blood_cultures %>% group_by(Month) %>% summarise(strataa_blood_cultures_n = n())
+
+
+combined_blood_cultures <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months"))
+combined_blood_cultures <- left_join(combined_blood_cultures, tyvac_blood_cultures_by_month, by = 'Month')
+
+combined_blood_cultures <- left_join(combined_blood_cultures, strataa_blood_cultures_by_month, by = 'Month')
+
+combined_blood_cultures$total_n <- combined_blood_cultures$tyvac_bc_n + combined_blood_cultures$strataa_blood_cultures_n
+combined_blood_cultures$total_bc_per_100000 <- (combined_blood_cultures$total_n / strataa_pop) * 100000
+
+```
+
 
 ## Investigating associations
 
@@ -120,22 +177,59 @@ Get neat dataframe together
 
 ```{r}
 
-case_and_prescription_incidence <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months")) 
-cases_incidence_per_month <- select(combined_cases_by_month, c('Month', 'total_incidence_per100000'))
+everything_for_model <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months")) 
+cases_incidence_per_month <- select(combined_cases_by_month, c('Month', 'total_typhoid_per100000'))
 prescriptions_incidence_per_month <- select(combined_prescrip_by_month, c('Month', 'total_prescrip_per_100000'))
+qrdr_incidence_per_month <- select(combined_qrdr_cases_by_month, c('Month', 'total_qrdr_incidence_per_100000'))
+bc_incidence_per_month <- select(combined_blood_cultures, c('Month', 'total_bc_per_100000'))
 
-case_and_prescription_incidence <- left_join(case_and_prescription_incidence, cases_incidence_per_month, by = 'Month')
-case_and_prescription_incidence <- left_join(case_and_prescription_incidence, prescriptions_incidence_per_month, by = 'Month')
+everything_for_model <- left_join(everything_for_model, cases_incidence_per_month, by = 'Month')
+everything_for_model <- left_join(everything_for_model, prescriptions_incidence_per_month, by = 'Month')
+everything_for_model <- left_join(everything_for_model, qrdr_incidence_per_month, by = 'Month')
+everything_for_model <- left_join(everything_for_model, bc_incidence_per_month, by = 'Month')
+
 
 ```
 
-Model 1: Here we are testing the hypothesis that increased month presciptions of ciprofloxacin was associated with increased numbers of cases of drug resistant typhoid.
+From PeterMacP:
 
-We will initially construct a zero-inflated negative Bbinomial regression model to investigate this association. We select the zero-inflated negative binomial distributional family because it is likely that the data are overdispersed, and because of the excess zero months.
+"Model 1: Here we are testing the hypothesis that increased month presciptions of ciprofloxacin was associated with increased numbers of cases of drug resistant typhoid.
+
+We will initially construct a zero-inflated negative binomial regression model to investigate this association. We select the zero-inflated negative binomial distributional family because it is likely that the data are overdispersed, and because of the excess zero months."
+
+Question: what part of this model specification specifies a zero-inflated model?
 
 ```{r}
 
-m1 <- glmmTMB(any_qrdr ~ cipro,  data = case_and_prescription_incidence, family = "nbinom1")
+m1 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000,  data = everything_for_model, family = "nbinom1")
+
+summary(m1)
+
+broom.mixed::tidy(m1, exponentiate = TRUE, conf.int = TRUE)
+
+```
+
+
+Model 2 - include the number of tests done in the model
+
+```{r}
+m2 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000 + total_bc_per_100000,  data = everything_for_model, family = "nbinom1")
+
+summary(m2)
+
+broom.mixed::tidy(m2, exponentiate = TRUE, conf.int = TRUE)
+
+```
+
+
+Model 3 - include number of tests and number of positions
+
+```{r}
+m3 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000 + total_bc_per_100000 + total_typhoid_per100000,  data = everything_for_model, family = "nbinom1")
+
+summary(m3)
+broom.mixed::tidy(m3, exponentiate = TRUE, conf.int = TRUE)
+
 
 ```
 
