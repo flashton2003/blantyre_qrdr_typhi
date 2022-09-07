@@ -16,6 +16,11 @@ library(tidyverse)
 library(readxl)
 library(broom)
 library(lubridate)
+#library(here)
+library(glmmTMB)
+library(tsibble)
+library(feasts)
+library(trending)
 ```
 
 ## Key variables
@@ -23,6 +28,10 @@ library(lubridate)
 ```{r KeyVariables}
 tyvac_pop <- 17695 # ndirande intention to treat population (or should we use the per protocol number?)
 strataa_pop <- 102242 # the population size at the final census (aug 2018-April 2019)
+# these dates are the start and finish of the period of overlap between strataa and tyvac
+tyvac_strataa_start <- as.Date('2018-05-01')
+tyvac_strataa_end <- as.Date('2019-10-01')
+
 ```
 
 ## Import data
@@ -57,7 +66,7 @@ strataa_cases_by_month <- strataa_cases  %>% group_by(Month) %>% summarise(strat
 #cases_end <- max(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
 
 # get the official start date of tyvac, as this will determine the start period
-combined_cases_by_month <- data.frame(Month = seq(as.Date('2018-05-01'), as.Date('2019-10-01'), "months")) 
+combined_cases_by_month <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months")) 
 #combined_by_month <- combined_by_month %>% rename(V1 = Month)
 combined_cases_by_month <- left_join(combined_cases_by_month, tyvac_cases_by_month, by = 'Month')
 combined_cases_by_month <- left_join(combined_cases_by_month, strataa_cases_by_month, by = 'Month')
@@ -83,7 +92,7 @@ strpresc_by_month <- strataa_prescriptions %>% group_by(Month) %>% summarise(str
 
 tyvacpresc_by_month <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.08 cipro prescriptions.csv", col_types = cols(Month = col_date(format = "%d/%m/%Y")))
 
-combined_prescrip_by_month <- data.frame(Month = seq(as.Date('2018-05-01'), as.Date('2019-10-01'), "months")) 
+combined_prescrip_by_month <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months")) 
 
 combined_prescrip_by_month <- left_join(combined_prescrip_by_month, tyvacpresc_by_month, by = 'Month')
 combined_prescrip_by_month <- left_join(combined_prescrip_by_month, strpresc_by_month, by = 'Month')
@@ -104,6 +113,31 @@ combined_prescrip_by_month$total_prescrip_per_100000 <- (combined_prescrip_by_mo
 
 ```
 
+
+## Investigating associations
+
+Get neat dataframe together
+
+```{r}
+
+case_and_prescription_incidence <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months")) 
+cases_incidence_per_month <- select(combined_cases_by_month, c('Month', 'total_incidence_per100000'))
+prescriptions_incidence_per_month <- select(combined_prescrip_by_month, c('Month', 'total_prescrip_per_100000'))
+
+case_and_prescription_incidence <- left_join(case_and_prescription_incidence, cases_incidence_per_month, by = 'Month')
+case_and_prescription_incidence <- left_join(case_and_prescription_incidence, prescriptions_incidence_per_month, by = 'Month')
+
+```
+
+Model 1: Here we are testing the hypothesis that increased month presciptions of ciprofloxacin was associated with increased numbers of cases of drug resistant typhoid.
+
+We will initially construct a zero-inflated negative Bbinomial regression model to investigate this association. We select the zero-inflated negative binomial distributional family because it is likely that the data are overdispersed, and because of the excess zero months.
+
+```{r}
+
+m1 <- glmmTMB(any_qrdr ~ cipro,  data = case_and_prescription_incidence, family = "nbinom1")
+
+```
 
 ## Figure 1
 
