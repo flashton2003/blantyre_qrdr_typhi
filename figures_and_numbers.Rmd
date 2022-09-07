@@ -43,7 +43,7 @@ all_typhi$Month <- as.Date(cut(all_typhi$`Properly formatted date`, breaks = "mo
 
 ```
 
-## Incidence rates
+## Sequencing confirmed typhoid incidence rate
 
 ```{r}
 
@@ -77,20 +77,29 @@ strataa_prescriptions <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_p
 
 strataa_prescriptions$Month <- as.Date(cut(strataa_prescriptions$ps12_dov, breaks = "month"))
 strataa_prescriptions <- strataa_prescriptions %>% filter(ps44_cipro == 1)
-strpresc_by_month <- strataa_prescriptions %>% group_by(Month) %>% summarise(n = n())
+strpresc_by_month <- strataa_prescriptions %>% group_by(Month) %>% summarise(strataa_prescrip_n = n())
 #ggplot(strataa_prescriptions)
-strpresc_by_month$strataa_prescrip_per100000 <- (strpresc_by_month$n / strataa_pop) * 100000
+#strpresc_by_month$strataa_prescrip_per100000 <- (strpresc_by_month$n / strataa_pop) * 100000
 
 tyvacpresc_by_month <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.08 cipro prescriptions.csv", col_types = cols(Month = col_date(format = "%d/%m/%Y")))
 
-tyvacpresc_by_month$tyvac_prescrip_eligible_per100000 <- (tyvacpresc_by_month$tyvac_eligible_ciprofloxacin_prescribed / tyvac_pop) * 100000
-tyvacpresc_by_month$tyvac_prescrip_not_eligible_per100000 <- (tyvacpresc_by_month$tyvac_not_eligible_ciprofloxacin_prescribed / tyvac_pop) * 100000
+combined_prescrip_by_month <- data.frame(Month = seq(as.Date('2018-05-01'), as.Date('2019-10-01'), "months")) 
 
-prescrip_start <- min(strataa_prescriptions$Month, tyvacpresc_by_month$Month)
-prescrip_end <- max(strataa_prescriptions$Month, tyvacpresc_by_month$Month)
-
-combined_prescrip_by_month <- data.frame(Month = seq(prescrip_start, prescrip_end, "months")) 
 combined_prescrip_by_month <- left_join(combined_prescrip_by_month, tyvacpresc_by_month, by = 'Month')
+combined_prescrip_by_month <- left_join(combined_prescrip_by_month, strpresc_by_month, by = 'Month')
+# currently only including prescriptions to eligible tyvac participants, not ineligible
+# ineligible prescriptions also add to the total pressure, but it should be negligible compared with the prescriptions
+# to eligible people?
+combined_prescrip_by_month$total_prescrip_n <- combined_prescrip_by_month$tyvac_eligible_ciprofloxacin_prescribed + combined_prescrip_by_month$strataa_prescrip_n
+
+combined_prescrip_by_month$total_prescrip_per_100000 <- (combined_prescrip_by_month$total_prescrip_n / strataa_pop) * 100000
+
+#tyvacpresc_by_month$tyvac_prescrip_eligible_per100000 <- (tyvacpresc_by_month$tyvac_eligible_ciprofloxacin_prescribed / tyvac_pop) * 100000
+#tyvacpresc_by_month$tyvac_prescrip_not_eligible_per100000 <- (tyvacpresc_by_month$tyvac_not_eligible_ciprofloxacin_prescribed / tyvac_pop) * 100000
+
+#prescrip_end <- max(strataa_prescriptions$Month, tyvacpresc_by_month$Month)
+##prescrip_start <- min(strataa_prescriptions$Month, tyvacpresc_by_month$Month)
+
 
 
 ```
