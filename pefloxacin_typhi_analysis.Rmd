@@ -171,9 +171,24 @@ combined_blood_cultures$total_bc_per_100000 <- (combined_blood_cultures$total_n 
 
 ## Investigating associations
 
+```{r}
 run_models <- function(input_data) {
-
+  m1 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000,  data = input_data, family = "nbinom1")
+  #summary(m1)
+  m1_summary <- broom.mixed::tidy(m1, exponentiate = TRUE, conf.int = TRUE)
+  
+  m2 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000 + total_bc_per_100000,  data = input_data, family = "nbinom1")
+  #summary(m2)
+  m2_summary <- broom.mixed::tidy(m2, exponentiate = TRUE, conf.int = TRUE)
+  
+  m3 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000 + total_bc_per_100000 + total_typhoid_per100000,  data = input_data, family = "nbinom1")
+  #summary(m3)
+  m3_summary <- broom.mixed::tidy(m3, exponentiate = TRUE, conf.int = TRUE)
+  
+  model_summaries <- list(m1_summary = m1_summary, m2_summary = m2_summary, m3_summary = m3_summary)
+  return(model_summaries)
 }
+```
 
 ### Combined tyvac_strataa period
 
@@ -192,7 +207,10 @@ everything_for_model <- left_join(everything_for_model, prescriptions_incidence_
 everything_for_model <- left_join(everything_for_model, qrdr_incidence_per_month, by = 'Month')
 everything_for_model <- left_join(everything_for_model, bc_incidence_per_month, by = 'Month')
 
-
+model_summaries <- run_models(everything_for_model)
+model_summaries$m1_summary
+model_summaries$m2_summary
+model_summaries$m3_summary
 ```
 
 From PeterMacP:
@@ -241,7 +259,7 @@ broom.mixed::tidy(m3, exponentiate = TRUE, conf.int = TRUE)
 
 This is a figure of the number of S. Typhi at QECH that were cipro sensitive and DCS.
 
-```{r Figure1 message=FALSE}
+```{r Figure1}
 
 pef_tested_qech_typhi <- all_typhi %>% filter(grepl('QECH', Study)) %>% filter(!is.na(`Cipro MIC res?`))
 pef_by_month <- pef_tested_qech_typhi %>% group_by(Month, `Cipro MIC res?`) %>% summarise(n = n())
