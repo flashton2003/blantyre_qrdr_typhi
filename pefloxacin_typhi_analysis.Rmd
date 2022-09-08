@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Libraries
 
-```{r}
+```{r message=FALSE}
 library(tidyverse)
 library(readxl)
 library(broom)
@@ -79,10 +79,10 @@ strataa_blood_cultures$Month <- as.Date(cut(strataa_blood_cultures$ps12_dov, bre
 Here we filter the input line list to extract the tyvac samples from ndirande and the strataa samples 
 
 ```{r}
-tyvac_cases <- all_typhi %>% filter(Study == 'TyVAC' & `TyVAC site` == 'Ndirande' & `Properly formatted date` < '2020-01-01' & !is.na(`Sequenced?`))
+tyvac_cases <- all_typhi %>% filter(Study == 'TyVAC' & `TyVAC site` == 'Ndirande'  & !is.na(`Sequenced?`))
 tyvac_cases_by_month <- tyvac_cases %>% group_by(Month) %>% summarise(tyvac_n = n())
 
-strataa_cases <- all_typhi %>% filter(grepl('STRATAA', Study) & `Properly formatted date` < '2020-01-01' & !is.na(`Sequenced?`))
+strataa_cases <- all_typhi %>% filter(grepl('STRATAA', Study) & !is.na(`Sequenced?`))
 
 strataa_cases_by_month <- strataa_cases  %>% group_by(Month) %>% summarise(strataa_n = n())
 
@@ -235,7 +235,7 @@ broom.mixed::tidy(m3, exponentiate = TRUE, conf.int = TRUE)
 
 This is a figure of the number of S. Typhi at QECH that were cipro sensitive and DCS.
 
-```{r Figure1}
+```{r Figure1 message=FALSE}
 
 pef_tested_qech_typhi <- all_typhi %>% filter(grepl('QECH', Study)) %>% filter(!is.na(`Cipro MIC res?`))
 pef_by_month <- pef_tested_qech_typhi %>% group_by(Month, `Cipro MIC res?`) %>% summarise(n = n())
