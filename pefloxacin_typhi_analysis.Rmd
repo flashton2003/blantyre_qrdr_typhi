@@ -40,6 +40,8 @@ tyvac_pop <- 17695 #
 strataa_pop <- 102242 # 
 tyvac_strataa_start <- as.Date('2018-05-01')
 tyvac_strataa_end <- as.Date('2019-10-01')
+strataa_start <- as.Date('2016-11-01')
+strataa_end <- as.Date('2019-10-31')
 ```
 
 # Import data
@@ -92,6 +94,7 @@ tyvac_cases_by_month <- tyvac_cases %>% group_by(Month) %>% summarise(tyvac_n = 
 strataa_cases <- all_typhi %>% filter(grepl('STRATAA', Study) & !is.na(`Sequenced?`))
 
 strataa_cases_by_month <- strataa_cases  %>% group_by(Month) %>% summarise(strataa_n = n())
+strataa_cases_by_month$strataa_typhoid_per100000 <- (strataa_cases_by_month$strataa_n / strataa_pop) * 100000
 
 cases_start <- min(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
 cases_end <- max(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
@@ -114,6 +117,7 @@ combined_cases_by_month$total_typhoid_per100000 <- (combined_cases_by_month$tota
 
 strataa_qrdr <- strataa_cases %>% filter(any_qrdr == 'QRDR')
 strataa_qrdr_cases_by_month <- strataa_qrdr  %>% group_by(Month) %>% summarise(strataa_qrdr_n = n())
+strataa_qrdr_cases_by_month$strataa_qrdr_incidence_per_100000 <- (strataa_qrdr_cases_by_month$strataa_qrdr_n / strataa_pop) * 100000
 
 tyvac_qrdr <- tyvac_cases %>% filter(any_qrdr == 'QRDR')
 tyvac_qrdr_cases_by_month <- tyvac_qrdr  %>% group_by(Month) %>% summarise(tyvac_qrdr_n = n())
@@ -134,13 +138,13 @@ combined_qrdr_cases_by_month$total_qrdr_incidence_per_100000 <- (combined_qrdr_c
 # cipro prescription incidence rates
 
 ```{r}
-strpresc_by_month <- strataa_prescriptions %>% group_by(Month) %>% summarise(strataa_prescrip_n = n())
+strataa_presc_by_month <- strataa_prescriptions %>% group_by(Month) %>% summarise(strataa_prescrip_n = n())
 #ggplot(strataa_prescriptions)
-#strpresc_by_month$strataa_prescrip_per100000 <- (strpresc_by_month$n / strataa_pop) * 100000
+strataa_presc_by_month$strataa_prescrip_per100000 <- (strataa_presc_by_month$strataa_prescrip_n / strataa_pop) * 100000
 
 combined_prescrip_by_month <- data.frame(Month = seq(cases_start, cases_end, "months")) 
 combined_prescrip_by_month <- left_join(combined_prescrip_by_month, tyvacpresc_by_month, by = 'Month')
-combined_prescrip_by_month <- left_join(combined_prescrip_by_month, strpresc_by_month, by = 'Month')
+combined_prescrip_by_month <- left_join(combined_prescrip_by_month, strataa_presc_by_month, by = 'Month')
 # currently only including prescriptions to eligible tyvac participants, not ineligible
 # ineligible prescriptions also add to the total pressure, but it should be negligible compared with the prescriptions
 # to eligible people?
@@ -154,8 +158,6 @@ combined_prescrip_by_month$total_prescrip_per_100000 <- (combined_prescrip_by_mo
 #prescrip_end <- max(strataa_prescriptions$Month, tyvacpresc_by_month$Month)
 ##prescrip_start <- min(strataa_prescriptions$Month, tyvacpresc_by_month$Month)
 
-
-
 ```
 
 # Getting the number of blood cultures
@@ -163,7 +165,7 @@ combined_prescrip_by_month$total_prescrip_per_100000 <- (combined_prescrip_by_mo
 ```{r}
 
 strataa_blood_cultures_by_month <- strataa_blood_cultures %>% group_by(Month) %>% summarise(strataa_blood_cultures_n = n())
-
+strataa_blood_cultures_by_month$strataa_bc_per_100000 <- (strataa_blood_cultures_by_month$strataa_blood_cultures_n / strataa_pop) * 100000
 
 combined_blood_cultures <- data.frame(Month = seq(cases_start, cases_end, "months"))
 combined_blood_cultures <- left_join(combined_blood_cultures, tyvac_blood_cultures_by_month, by = 'Month')
@@ -236,6 +238,35 @@ model_summaries$m3_summary
 
 ```
 
+## strataa only
+
+```{r}
+strataa_recruitment_period <- data.frame(Month = seq(strataa_start, strataa_end, "months"))
+
+strataa_cases_incidence_per_month <- select(strataa_cases_by_month, c('Month', 'strataa_typhoid_per100000'))
+strataa_prescriptions_incidence_per_month <- select(strataa_presc_by_month, c('Month', 'strataa_prescrip_per100000'))
+strataa_qrdr_incidence_per_month <- select(strataa_qrdr_cases_by_month, c('Month', 'strataa_qrdr_incidence_per_100000'))
+strataa_bc_incidence_per_month <- select(strataa_blood_cultures_by_month, c('Month', 'strataa_bc_per_100000'))
+
+strataa_recruitment_period <- left_join(strataa_recruitment_period, strataa_cases_incidence_per_month, by = 'Month')
+strataa_recruitment_period <- left_join(strataa_recruitment_period, strataa_prescriptions_incidence_per_month, by = 'Month')
+strataa_recruitment_period <- left_join(strataa_recruitment_period, strataa_qrdr_incidence_per_month, by = 'Month')
+strataa_recruitment_period <- left_join(strataa_recruitment_period, strataa_bc_incidence_per_month, by = 'Month')
+
+strataa_recruitment_period[is.na(strataa_recruitment_period)] <- 0
+
+strataa_recruitment_period <- strataa_recruitment_period %>% rename(total_typhoid_per100000 = strataa_typhoid_per100000, total_qrdr_incidence_per_100000 = strataa_qrdr_incidence_per_100000, total_prescrip_per_100000 = strataa_prescrip_per100000, total_bc_per_100000 = strataa_bc_per_100000)
+
+```
+
+```{r run_models}
+
+model_summaries <- run_models(strataa_recruitment_period)
+model_summaries$m1_summary
+model_summaries$m2_summary
+model_summaries$m3_summary
+
+```
 
 
 # Figure 1
