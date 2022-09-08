@@ -29,6 +29,7 @@ library(tsibble)
 library(feasts)
 library(trending)
 library(patchwork)
+library(kableExtra)
 ```
 
 # Key variables
@@ -179,8 +180,6 @@ combined_blood_cultures$total_bc_per_100000 <- (combined_blood_cultures$total_n 
 
 
 # Investigating associations
-
-
 ## define function to run models
 
 From PeterMacP:
@@ -232,9 +231,9 @@ Run models
 ```{r run_models}
 
 model_summaries <- run_models(strataa_tyvac_recruitment_period)
-model_summaries$m1_summary
-model_summaries$m2_summary
-model_summaries$m3_summary
+model_summaries$m1_summary %>% kbl() %>% kable_styling()
+model_summaries$m2_summary %>% kbl() %>% kable_styling()
+model_summaries$m3_summary %>% kbl() %>% kable_styling()
 
 ```
 
@@ -259,17 +258,19 @@ strataa_recruitment_period <- strataa_recruitment_period %>% rename(total_typhoi
 
 ```
 
-```{r run_models}
+```{r run_strataa_models}
 
 model_summaries <- run_models(strataa_recruitment_period)
-model_summaries$m1_summary
-model_summaries$m2_summary
-model_summaries$m3_summary
+model_summaries$m1_summary %>% kbl() %>% kable_styling()
+model_summaries$m2_summary %>% kbl() %>% kable_styling()
+model_summaries$m3_summary %>% kbl() %>% kable_styling()
 
 ```
 
 
-# Figure 1
+
+# Graphs
+## Figure 1
 
 This is a figure of the number of S. Typhi at QECH that were cipro sensitive and DCS.
 
@@ -290,7 +291,7 @@ ggplot(pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`, label = n)) 
   theme(axis.text=element_text(size=12), axis.title=element_text(size=14))
 ```
 
-# Numbers for Figure 1
+## Numbers for Figure 1
 
 ```{r}
 total_qech_typhi_tested <- sum(pef_by_month$n)
@@ -300,13 +301,55 @@ total_qech_typhi_dcs_or_r <- filter(pef_by_month, `Cipro MIC res?` == 'DCS' | `C
 There were `r total_qech_typhi_tested` total qech typhi tested, and `r total_qech_typhi_dcs_or_r` DCS or R.
 
 
-# Figure 2
+## Figure 2
 
 Graphs of the combined strataa_tyvac_recruitment_period.
 
+```{r}
+plot_typh_presc_qrdr_bc <- function(input_data) {
+  typhoid_graph <- ggplot(input_data, aes(x = Month, y = total_typhoid_per100000)) + 
+    geom_bar(stat = "identity") + 
+    ylab('Sequencing confirmed typhoid\nper 100,000 people')
 
+  cipro_prescrip_graph <- ggplot(input_data, aes(x = Month, y = total_prescrip_per_100000)) + 
+    geom_bar(stat = "identity") + 
+    ylab('Ciprofloxacin prescriptions\nper 100,000 people')
 
-```{r Figure2.v2 , fig.width = 6, fig.height = 12}
+  qrdr_graph <- ggplot(input_data, aes(x = Month, y = total_qrdr_incidence_per_100000)) + 
+    geom_bar(stat = "identity") +
+    ylab('S. Typhi with QRDR mutations\nper 100,000 people')
+
+  bc_graph <- ggplot(input_data, aes(x = Month, y = total_bc_per_100000)) + 
+    geom_bar(stat = "identity") +
+    ylab('Number of blood cultures\nper 100,000 people')
+
+  p <- typhoid_graph / cipro_prescrip_graph / qrdr_graph / bc_graph + plot_layout(heights = c(5,5,5,5))
+
+  return(p)
+  
+  
+}
+```
+
+Plot STRATAA only
+
+```{r, fig.width = 6, fig.height = 12}
+
+strataa_only_tpqb_graph <- plot_typh_presc_qrdr_bc(strataa_recruitment_period) # tpqb stands for typhoid, prescriptions, qrdr and blood cultures
+strataa_only_tpqb_graph + plot_annotation('STRATAA only')
+
+```
+
+Plot Strataa tyvac overlap
+
+```{r fig.width = 6, fig.height = 12}
+
+strataa_and_tyvac_tpqb_graph <- plot_typh_presc_qrdr_bc(strataa_tyvac_recruitment_period)
+strataa_and_tyvac_tpqb_graph + plot_annotation('STRATAA and tyvac')
+
+```
+
+```{r Figure2.v2, fig.width = 6, fig.height = 12}
 
 
 typhoid_graph <- ggplot(strataa_tyvac_recruitment_period, aes(x = Month, y = total_typhoid_per100000)) + 
@@ -337,6 +380,7 @@ p
 ```
 
 
+## Figure of STRATAA only
 
 
 
