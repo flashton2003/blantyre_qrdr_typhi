@@ -26,16 +26,22 @@ library(patchwork)
 
 ## Key variables
 
+`tyvac_pop` is the ndirande intention to treat population (or should we use the per protocol number?). `strataa_pop` is the population size at the final census (aug 2018-April 2019). `tyvac_strataa_start` and `tyvac_strataa_end` are the start and finish of the period of overlap between strataa and tyvac.
+
 ```{r KeyVariables}
-tyvac_pop <- 17695 # ndirande intention to treat population (or should we use the per protocol number?)
-strataa_pop <- 102242 # the population size at the final census (aug 2018-April 2019)
-# these dates are the start and finish of the period of overlap between strataa and tyvac
+tyvac_pop <- 17695 # 
+strataa_pop <- 102242 # 
 tyvac_strataa_start <- as.Date('2018-05-01')
 tyvac_strataa_end <- as.Date('2019-10-01')
-
 ```
 
 ## Import data
+
+Here we import all the files needed for this analysis.
+
+Todo:
+
+* make sure excluding multiple isolates from the same person (get PIDs for both STRATAA and TyVAC)
 
 ```{r ImportData}
 
@@ -66,16 +72,11 @@ tyvac_blood_cultures_by_month <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxa
 strataa_blood_cultures <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.11.12/STRATAA.ps_enrolment.date_only.csv", col_types = cols(ps12_dov = col_date(format = "%Y-%m-%d")))
 strataa_blood_cultures$Month <- as.Date(cut(strataa_blood_cultures$ps12_dov, breaks = "month"))
 
-
-
-
 ```
 
 ## Sequencing confirmed typhoid incidence rate
 
-todo:
-* make sure excluding multiple isolates from the same person
-
+Here we filter the input line list to extract the tyvac samples from ndirande and the strataa samples 
 
 ```{r}
 tyvac_cases <- all_typhi %>% filter(Study == 'TyVAC' & `TyVAC site` == 'Ndirande' & `Properly formatted date` < '2020-01-01' & !is.na(`Sequenced?`))
