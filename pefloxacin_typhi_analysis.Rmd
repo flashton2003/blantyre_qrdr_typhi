@@ -2,14 +2,21 @@
 title: "DCS Typhi in Blantyre"
 author: "Philip Ashton"
 date: "30/08/2022"
-output: html_document
+output: 
+  html_document:
+      toc: true
+      toc_float: true
+      theme: united
+      number_sections: true
+
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
 ```
 
-## Libraries
+# Libraries
 
 ```{r message=FALSE}
 library(tidyverse)
@@ -24,7 +31,7 @@ library(trending)
 library(patchwork)
 ```
 
-## Key variables
+# Key variables
 
 `tyvac_pop` is the ndirande intention to treat population (or should we use the per protocol number?). `strataa_pop` is the population size at the final census (aug 2018-April 2019). `tyvac_strataa_start` and `tyvac_strataa_end` are the start and finish of the period of overlap between strataa and tyvac.
 
@@ -35,7 +42,7 @@ tyvac_strataa_start <- as.Date('2018-05-01')
 tyvac_strataa_end <- as.Date('2019-10-01')
 ```
 
-## Import data
+# Import data
 
 Here we import all the files needed for this analysis.
 
@@ -73,7 +80,7 @@ strataa_blood_cultures$Month <- as.Date(cut(strataa_blood_cultures$ps12_dov, bre
 
 ```
 
-## Sequencing confirmed typhoid incidence rate
+# Sequencing confirmed typhoid incidence rate
 
 Here we filter the input line list to extract the *sequenced* tyvac samples from ndirande and the sequenced strataa samples. `cases_start` and `cases_end` are defined here.
 
@@ -101,7 +108,7 @@ combined_cases_by_month$total_typhoid_per100000 <- (combined_cases_by_month$tota
 
 ```
 
-## QRDR typhi incidence
+# QRDR typhi incidence
 
 ```{r}
 
@@ -124,7 +131,7 @@ combined_qrdr_cases_by_month$total_qrdr_incidence_per_100000 <- (combined_qrdr_c
 
 ```
 
-## cipro prescription incidence rates
+# cipro prescription incidence rates
 
 ```{r}
 strpresc_by_month <- strataa_prescriptions %>% group_by(Month) %>% summarise(strataa_prescrip_n = n())
@@ -151,7 +158,7 @@ combined_prescrip_by_month$total_prescrip_per_100000 <- (combined_prescrip_by_mo
 
 ```
 
-## Getting the number of blood cultures
+# Getting the number of blood cultures
 
 ```{r}
 
@@ -169,7 +176,18 @@ combined_blood_cultures$total_bc_per_100000 <- (combined_blood_cultures$total_n 
 ```
 
 
-## Investigating associations
+# Investigating associations
+
+
+## define function to run models
+
+From PeterMacP:
+
+"Model 1: Here we are testing the hypothesis that increased month presciptions of ciprofloxacin was associated with increased numbers of cases of drug resistant typhoid.
+
+We will initially construct a zero-inflated negative binomial regression model to investigate this association. We select the zero-inflated negative binomial distributional family because it is likely that the data are overdispersed, and because of the excess zero months."
+
+*Question: what part of this model specification specifies a zero-inflated model?*
 
 ```{r}
 run_models <- function(input_data) {
@@ -190,72 +208,37 @@ run_models <- function(input_data) {
 }
 ```
 
-### Combined tyvac_strataa period
+## Combined tyvac_strataa period
 
-Get neat dataframe together - 
+Make a dataframe for just the time period that was shared by strataa and tyvac. Then extract the total incidence (the combined strataa and tyvac cases). Then combine all together into a neat data frame.
 
 ```{r}
+strataa_tyvac_recruitment_period <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months")) 
 
-everything_for_model <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months")) 
 cases_incidence_per_month <- select(combined_cases_by_month, c('Month', 'total_typhoid_per100000'))
 prescriptions_incidence_per_month <- select(combined_prescrip_by_month, c('Month', 'total_prescrip_per_100000'))
 qrdr_incidence_per_month <- select(combined_qrdr_cases_by_month, c('Month', 'total_qrdr_incidence_per_100000'))
 bc_incidence_per_month <- select(combined_blood_cultures, c('Month', 'total_bc_per_100000'))
 
-everything_for_model <- left_join(everything_for_model, cases_incidence_per_month, by = 'Month')
-everything_for_model <- left_join(everything_for_model, prescriptions_incidence_per_month, by = 'Month')
-everything_for_model <- left_join(everything_for_model, qrdr_incidence_per_month, by = 'Month')
-everything_for_model <- left_join(everything_for_model, bc_incidence_per_month, by = 'Month')
+strataa_tyvac_recruitment_period <- left_join(strataa_tyvac_recruitment_period, cases_incidence_per_month, by = 'Month')
+strataa_tyvac_recruitment_period <- left_join(strataa_tyvac_recruitment_period, prescriptions_incidence_per_month, by = 'Month')
+strataa_tyvac_recruitment_period <- left_join(strataa_tyvac_recruitment_period, qrdr_incidence_per_month, by = 'Month')
+strataa_tyvac_recruitment_period <- left_join(strataa_tyvac_recruitment_period, bc_incidence_per_month, by = 'Month')
+```
+Run models
 
-model_summaries <- run_models(everything_for_model)
+```{r run_models}
+
+model_summaries <- run_models(strataa_tyvac_recruitment_period)
 model_summaries$m1_summary
 model_summaries$m2_summary
 model_summaries$m3_summary
-```
-
-From PeterMacP:
-
-"Model 1: Here we are testing the hypothesis that increased month presciptions of ciprofloxacin was associated with increased numbers of cases of drug resistant typhoid.
-
-We will initially construct a zero-inflated negative binomial regression model to investigate this association. We select the zero-inflated negative binomial distributional family because it is likely that the data are overdispersed, and because of the excess zero months."
-
-Question: what part of this model specification specifies a zero-inflated model?
-
-```{r}
-
-m1 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000,  data = everything_for_model, family = "nbinom1")
-
-summary(m1)
-
-broom.mixed::tidy(m1, exponentiate = TRUE, conf.int = TRUE)
 
 ```
 
 
-Model 2 - include the number of tests done in the model
 
-```{r}
-m2 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000 + total_bc_per_100000,  data = everything_for_model, family = "nbinom1")
-
-summary(m2)
-
-broom.mixed::tidy(m2, exponentiate = TRUE, conf.int = TRUE)
-
-```
-
-
-Model 3 - include number of tests and number of positions
-
-```{r}
-m3 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000 + total_bc_per_100000 + total_typhoid_per100000,  data = everything_for_model, family = "nbinom1")
-
-summary(m3)
-broom.mixed::tidy(m3, exponentiate = TRUE, conf.int = TRUE)
-
-
-```
-
-## Figure 1
+# Figure 1
 
 This is a figure of the number of S. Typhi at QECH that were cipro sensitive and DCS.
 
@@ -276,7 +259,7 @@ ggplot(pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`, label = n)) 
   theme(axis.text=element_text(size=12), axis.title=element_text(size=14))
 ```
 
-## Numbers for Figure 1
+# Numbers for Figure 1
 
 ```{r}
 total_qech_typhi_tested <- sum(pef_by_month$n)
@@ -286,31 +269,40 @@ total_qech_typhi_dcs_or_r <- filter(pef_by_month, `Cipro MIC res?` == 'DCS' | `C
 There were `r total_qech_typhi_tested` total qech typhi tested, and `r total_qech_typhi_dcs_or_r` DCS or R.
 
 
-## Figure 2
+# Figure 2
 
-```{r Figure2.v2}
+Graphs of the combined strataa_tyvac_recruitment_period.
 
-typhoid_graph <- ggplot(everything_for_model, aes(x = Month, y = total_typhoid_per100000)) + 
+
+
+```{r Figure2.v2 , fig.width = 6, fig.height = 12}
+
+
+typhoid_graph <- ggplot(strataa_tyvac_recruitment_period, aes(x = Month, y = total_typhoid_per100000)) + 
   geom_bar(stat = "identity") + 
   ylab('Sequencing confirmed typhoid\nper 100,000 people')
 
-cipro_prescrip_graph <- ggplot(everything_for_model, aes(x = Month, y = total_prescrip_per_100000)) + 
+cipro_prescrip_graph <- ggplot(strataa_tyvac_recruitment_period, aes(x = Month, y = total_prescrip_per_100000)) + 
   geom_bar(stat = "identity") + 
   ylab('Ciprofloxacin prescriptions\nper 100,000 people')
 
-qrdr_graph <- ggplot(everything_for_model, aes(x = Month, y = total_qrdr_incidence_per_100000)) + 
+qrdr_graph <- ggplot(strataa_tyvac_recruitment_period, aes(x = Month, y = total_qrdr_incidence_per_100000)) + 
   geom_bar(stat = "identity") +
   ylab('S. Typhi with QRDR mutations\nper 100,000 people')
 
-qrdr_graph
+#qrdr_graph
 
-bc_graph <- ggplot(everything_for_model, aes(x = Month, y = total_bc_per_100000)) + 
+bc_graph <- ggplot(strataa_tyvac_recruitment_period, aes(x = Month, y = total_bc_per_100000)) + 
   geom_bar(stat = "identity") +
   ylab('Number of blood cultures\nper 100,000 people')
 
+#typhoid_graph
+#cipro_prescrip_graph
+#qrdr_graph
+#bc_graph
+p <- typhoid_graph / cipro_prescrip_graph / qrdr_graph / bc_graph + plot_layout(heights = c(5,5,5,5))
 
-p <- typhoid_graph / cipro_prescrip_graph / qrdr_graph / bc_graph
-
+p
 ```
 
 
