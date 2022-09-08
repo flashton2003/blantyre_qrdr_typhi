@@ -1,7 +1,7 @@
 ---
 title: "DCS Typhi in Blantyre"
 author: "Philip Ashton"
-date: "30/08/2022"
+date: "08/09/2022"
 output: 
   html_document:
       toc: true
@@ -12,9 +12,16 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 ```
+
+In this document we are analysing Salmonella Typhi from the STRATAA and TyVAC studies. In particular, we are interested in the relationship between QRDR S. Typhi (i.e. Typhi that has mutations in the quinolone resistance determining regions) and the number of ciprofloxacin prescriptions. Other co-variables included in the model are: number of typhoid cases and number of blood cultures carried out.
+
+# Todo/questions
+
+1. What part of the current model specification specifies a zero-inflated model?
+2. Should the co-variable be the total number of typhi, or the total number of typhi that don't have the QRDR mutation?
+3. Need to do the serial autocorrelation analysis
 
 # Libraries
 
@@ -66,14 +73,16 @@ all_typhi <- read_excel(line_list_handle, col_types = c("text", "text", "text", 
         "text", "text"))
 
 all_typhi$Month <- as.Date(cut(all_typhi$`Properly formatted date`, breaks = "month"))
+# Note starts with "Ignore" if there is some reason the sample should be ignored
 all_typhi <- all_typhi %>% mutate(any_qrdr = ifelse(is.na(QRDR), NA, "QRDR")) %>% filter(!grepl("^Ignore", Note))
 
-
-strataa_prescriptions <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.01 strataa_ndirande_prescribed from James Meiring.csv", 
-    col_types = cols(ps12_dov = col_datetime(format = "%d/%m/%Y %H:%M")))
+# ps12_dov is the date of visit
+strataa_prescriptions <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.01 strataa_ndirande_prescribed from James Meiring.csv", col_types = cols(ps12_dov = col_datetime(format = "%d/%m/%Y %H:%M")))
 strataa_prescriptions$Month <- as.Date(cut(strataa_prescriptions$ps12_dov, breaks = "month"))
+# ps44_cipro is 1 if cipro was prescribed
 strataa_prescriptions <- strataa_prescriptions %>% filter(ps44_cipro == 1)
 
+# this data is already tabulated by month
 tyvacpresc_by_month <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.08 cipro prescriptions.csv", col_types = cols(Month = col_date(format = "%d/%m/%Y")))
 
 tyvac_blood_cultures_by_month <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.11.12/TyVAC monthly BC.csv", col_types = cols(date = col_date(format = "%Y-%m-%d"))) %>% rename('Month' = 'date', 'tyvac_bc_n' = 'BC collected')
@@ -112,7 +121,7 @@ combined_cases_by_month$total_typhoid_per100000 <- (combined_cases_by_month$tota
 
 ```
 
-# QRDR typhi incidence
+# QRDR Typhi incidence
 
 ```{r}
 
@@ -136,7 +145,7 @@ combined_qrdr_cases_by_month$total_qrdr_incidence_per_100000 <- (combined_qrdr_c
 
 ```
 
-# cipro prescription incidence rates
+# Cipro prescription incidence rates
 
 ```{r}
 strataa_presc_by_month <- strataa_prescriptions %>% group_by(Month) %>% summarise(strataa_prescrip_n = n())
@@ -188,8 +197,6 @@ From PeterMacP:
 
 We will initially construct a zero-inflated negative binomial regression model to investigate this association. We select the zero-inflated negative binomial distributional family because it is likely that the data are overdispersed, and because of the excess zero months."
 
-*Question: what part of this model specification specifies a zero-inflated model?*
-
 ```{r}
 run_models <- function(input_data) {
   m1 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000,  data = input_data, family = "nbinom1")
@@ -225,7 +232,22 @@ strataa_tyvac_recruitment_period <- left_join(strataa_tyvac_recruitment_period, 
 strataa_tyvac_recruitment_period <- left_join(strataa_tyvac_recruitment_period, prescriptions_incidence_per_month, by = 'Month')
 strataa_tyvac_recruitment_period <- left_join(strataa_tyvac_recruitment_period, qrdr_incidence_per_month, by = 'Month')
 strataa_tyvac_recruitment_period <- left_join(strataa_tyvac_recruitment_period, bc_incidence_per_month, by = 'Month')
+
+st_typh <- sum(strataa_tyvac_recruitment_period$total_typhoid_per100000)
+st_prescrip <- sum(strataa_tyvac_recruitment_period$total_prescrip_per_100000)
+st_qrdr <- sum(strataa_tyvac_recruitment_period$total_qrdr_incidence_per_100000)
+st_bc <- sum(strataa_tyvac_recruitment_period$total_bc_per_100000)
+
 ```
+
+Per 100,000 people over the STRATAA|TyVAC study period there were:
+
+* `r st_typh` cases of sequencing confirmed typhoid.
+* `r st_prescrip` prescriptions of cipro
+* `r st_qrdr` QRDR typhoid (ie.. resistant)
+* `r st_bc` blood cultures
+
+
 Run models
 
 ```{r run_models}
@@ -237,7 +259,7 @@ model_summaries$m3_summary %>% kbl() %>% kable_styling()
 
 ```
 
-## strataa only
+## STRATAA only
 
 ```{r}
 strataa_recruitment_period <- data.frame(Month = seq(strataa_start, strataa_end, "months"))
@@ -256,7 +278,21 @@ strataa_recruitment_period[is.na(strataa_recruitment_period)] <- 0
 
 strataa_recruitment_period <- strataa_recruitment_period %>% rename(total_typhoid_per100000 = strataa_typhoid_per100000, total_qrdr_incidence_per_100000 = strataa_qrdr_incidence_per_100000, total_prescrip_per_100000 = strataa_prescrip_per100000, total_bc_per_100000 = strataa_bc_per_100000)
 
+s_typh <- sum(strataa_recruitment_period$total_typhoid_per100000)
+s_prescrip <- sum(strataa_recruitment_period$total_prescrip_per_100000)
+s_qrdr <- sum(strataa_recruitment_period$total_qrdr_incidence_per_100000)
+s_bc <- sum(strataa_recruitment_period$total_bc_per_100000)
+
 ```
+
+Per 100,000 people over the STRATAA|TyVAC study period there were:
+
+* `r s_typh` cases of sequencing confirmed typhoid.
+* `r s_prescrip` prescriptions of cipro
+* `r s_qrdr` QRDR typhoid (ie.. resistant)
+* `r s_bc` blood cultures
+
+
 
 ```{r run_strataa_models}
 
@@ -291,7 +327,7 @@ ggplot(pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`, label = n)) 
   theme(axis.text=element_text(size=12), axis.title=element_text(size=14))
 ```
 
-## Numbers for Figure 1
+### Numbers for Figure 1
 
 ```{r}
 total_qech_typhi_tested <- sum(pef_by_month$n)
@@ -349,38 +385,7 @@ strataa_and_tyvac_tpqb_graph + plot_annotation('STRATAA and tyvac')
 
 ```
 
-```{r Figure2.v2, fig.width = 6, fig.height = 12}
 
-
-typhoid_graph <- ggplot(strataa_tyvac_recruitment_period, aes(x = Month, y = total_typhoid_per100000)) + 
-  geom_bar(stat = "identity") + 
-  ylab('Sequencing confirmed typhoid\nper 100,000 people')
-
-cipro_prescrip_graph <- ggplot(strataa_tyvac_recruitment_period, aes(x = Month, y = total_prescrip_per_100000)) + 
-  geom_bar(stat = "identity") + 
-  ylab('Ciprofloxacin prescriptions\nper 100,000 people')
-
-qrdr_graph <- ggplot(strataa_tyvac_recruitment_period, aes(x = Month, y = total_qrdr_incidence_per_100000)) + 
-  geom_bar(stat = "identity") +
-  ylab('S. Typhi with QRDR mutations\nper 100,000 people')
-
-#qrdr_graph
-
-bc_graph <- ggplot(strataa_tyvac_recruitment_period, aes(x = Month, y = total_bc_per_100000)) + 
-  geom_bar(stat = "identity") +
-  ylab('Number of blood cultures\nper 100,000 people')
-
-#typhoid_graph
-#cipro_prescrip_graph
-#qrdr_graph
-#bc_graph
-p <- typhoid_graph / cipro_prescrip_graph / qrdr_graph / bc_graph + plot_layout(heights = c(5,5,5,5))
-
-p
-```
-
-
-## Figure of STRATAA only
 
 
 
