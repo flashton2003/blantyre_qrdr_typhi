@@ -42,12 +42,13 @@ Here we import all the files needed for this analysis.
 Todo:
 
 * make sure excluding multiple isolates from the same person (get PIDs for both STRATAA and TyVAC)
+* get the definitive line list of all typhis from STRATAA
 
 ```{r ImportData}
 
-line_list_handle <- "~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.04.08/2022.04.08 line list.xlsx"
+line_list_handle <- "~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.09.08/2022.09.08 line list.xlsx"
 
-all_typhi <- read_excel("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.04.08/2022.04.08 line list.xlsx", col_types = c("text", "text", "text", "text",
+all_typhi <- read_excel(line_list_handle, col_types = c("text", "text", "text", "text",
         "text", "date", "text", "text", "numeric", 
         "text", "text", "text", "text", "text", 
         "text", "text", "text", "numeric", 
@@ -65,9 +66,7 @@ strataa_prescriptions <- strataa_prescriptions %>% filter(ps44_cipro == 1)
 
 tyvacpresc_by_month <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.08 cipro prescriptions.csv", col_types = cols(Month = col_date(format = "%d/%m/%Y")))
 
-
 tyvac_blood_cultures_by_month <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.11.12/TyVAC monthly BC.csv", col_types = cols(date = col_date(format = "%Y-%m-%d"))) %>% rename('Month' = 'date', 'tyvac_bc_n' = 'BC collected')
-
 
 strataa_blood_cultures <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.11.12/STRATAA.ps_enrolment.date_only.csv", col_types = cols(ps12_dov = col_date(format = "%Y-%m-%d")))
 strataa_blood_cultures$Month <- as.Date(cut(strataa_blood_cultures$ps12_dov, breaks = "month"))
@@ -76,12 +75,13 @@ strataa_blood_cultures$Month <- as.Date(cut(strataa_blood_cultures$ps12_dov, bre
 
 ## Sequencing confirmed typhoid incidence rate
 
-Here we filter the input line list to extract the tyvac samples from ndirande and the strataa samples 
+Here we filter the input line list to extract the *sequenced* tyvac samples from ndirande and the sequenced strataa samples.
 
 ```{r}
 tyvac_cases <- all_typhi %>% filter(Study == 'TyVAC' & `TyVAC site` == 'Ndirande'  & !is.na(`Sequenced?`))
 tyvac_cases_by_month <- tyvac_cases %>% group_by(Month) %>% summarise(tyvac_n = n())
 
+# we use grepl to find "strataa adjacent" samples as well as strataa samples.
 strataa_cases <- all_typhi %>% filter(grepl('STRATAA', Study) & !is.na(`Sequenced?`))
 
 strataa_cases_by_month <- strataa_cases  %>% group_by(Month) %>% summarise(strataa_n = n())
