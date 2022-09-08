@@ -75,7 +75,7 @@ strataa_blood_cultures$Month <- as.Date(cut(strataa_blood_cultures$ps12_dov, bre
 
 ## Sequencing confirmed typhoid incidence rate
 
-Here we filter the input line list to extract the *sequenced* tyvac samples from ndirande and the sequenced strataa samples.
+Here we filter the input line list to extract the *sequenced* tyvac samples from ndirande and the sequenced strataa samples. `cases_start` and `cases_end` are defined here.
 
 ```{r}
 tyvac_cases <- all_typhi %>% filter(Study == 'TyVAC' & `TyVAC site` == 'Ndirande'  & !is.na(`Sequenced?`))
@@ -86,11 +86,11 @@ strataa_cases <- all_typhi %>% filter(grepl('STRATAA', Study) & !is.na(`Sequence
 
 strataa_cases_by_month <- strataa_cases  %>% group_by(Month) %>% summarise(strataa_n = n())
 
-#cases_start <- min(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
-#cases_end <- max(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
+cases_start <- min(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
+cases_end <- max(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
 
 # get the official start date of tyvac, as this will determine the start period
-combined_cases_by_month <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months")) 
+combined_cases_by_month <- data.frame(Month = seq(cases_start, cases_end, "months")) 
 #combined_by_month <- combined_by_month %>% rename(V1 = Month)
 combined_cases_by_month <- left_join(combined_cases_by_month, tyvac_cases_by_month, by = 'Month')
 combined_cases_by_month <- left_join(combined_cases_by_month, strataa_cases_by_month, by = 'Month')
@@ -111,7 +111,7 @@ strataa_qrdr_cases_by_month <- strataa_qrdr  %>% group_by(Month) %>% summarise(s
 tyvac_qrdr <- tyvac_cases %>% filter(any_qrdr == 'QRDR')
 tyvac_qrdr_cases_by_month <- tyvac_qrdr  %>% group_by(Month) %>% summarise(tyvac_qrdr_n = n())
 
-combined_qrdr_cases_by_month <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months")) 
+combined_qrdr_cases_by_month <- data.frame(Month = seq(cases_start, cases_end, "months")) 
 
 combined_qrdr_cases_by_month <- left_join(combined_qrdr_cases_by_month, strataa_qrdr_cases_by_month, by = 'Month')
 combined_qrdr_cases_by_month <- left_join(combined_qrdr_cases_by_month, tyvac_qrdr_cases_by_month, by = 'Month')
@@ -131,7 +131,7 @@ strpresc_by_month <- strataa_prescriptions %>% group_by(Month) %>% summarise(str
 #ggplot(strataa_prescriptions)
 #strpresc_by_month$strataa_prescrip_per100000 <- (strpresc_by_month$n / strataa_pop) * 100000
 
-combined_prescrip_by_month <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months")) 
+combined_prescrip_by_month <- data.frame(Month = seq(cases_start, cases_end, "months")) 
 combined_prescrip_by_month <- left_join(combined_prescrip_by_month, tyvacpresc_by_month, by = 'Month')
 combined_prescrip_by_month <- left_join(combined_prescrip_by_month, strpresc_by_month, by = 'Month')
 # currently only including prescriptions to eligible tyvac participants, not ineligible
@@ -158,7 +158,7 @@ combined_prescrip_by_month$total_prescrip_per_100000 <- (combined_prescrip_by_mo
 strataa_blood_cultures_by_month <- strataa_blood_cultures %>% group_by(Month) %>% summarise(strataa_blood_cultures_n = n())
 
 
-combined_blood_cultures <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months"))
+combined_blood_cultures <- data.frame(Month = seq(cases_start, cases_end, "months"))
 combined_blood_cultures <- left_join(combined_blood_cultures, tyvac_blood_cultures_by_month, by = 'Month')
 
 combined_blood_cultures <- left_join(combined_blood_cultures, strataa_blood_cultures_by_month, by = 'Month')
@@ -171,7 +171,13 @@ combined_blood_cultures$total_bc_per_100000 <- (combined_blood_cultures$total_n 
 
 ## Investigating associations
 
-Get neat dataframe together
+run_models <- function(input_data) {
+
+}
+
+### Combined tyvac_strataa period
+
+Get neat dataframe together - 
 
 ```{r}
 
