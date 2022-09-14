@@ -20,8 +20,8 @@ source('pefloxacin_typhi_functions.R')
 # Read in data
 
 ```{r}
-cases_bc_qrdr_prescrip_handle <- '2022.09.14.pef_typhi.cases_bc_qrdr_prescrip.csv'
-qech_pef_by_month_handle <- '2022.09.14.qech_pef_results_per_month.csv' 
+cases_bc_qrdr_prescrip_handle <- 'data/2022.09.14.pef_typhi.cases_bc_qrdr_prescrip.csv'
+qech_pef_by_month_handle <- 'data/2022.09.14.qech_pef_results_per_month.csv' 
 ```
 
 Data has been pulled in from various sources and cleaned using `pefloxacin_typhi_data_cleaning.Rmd`. The clean data has been saved as `r cases_bc_qrdr_prescrip_handle`.

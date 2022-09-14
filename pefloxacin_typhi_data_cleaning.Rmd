@@ -1,7 +1,7 @@
 ---
 title: "DCS Typhi in Blantyre"
 author: "Philip Ashton"
-date: "08/09/2022"
+date: "`r Sys.Date()`"
 output: 
   html_document:
       toc: true
@@ -78,7 +78,7 @@ qech_pef_tested_typhi <- all_typhi %>% filter(grepl('QECH', Study)) %>% filter(!
 qech_pef_by_month <- qech_pef_tested_typhi %>% group_by(Month, `Cipro MIC res?`) %>% summarise(n = n())
 qech_pef_by_month <- qech_pef_by_month %>% filter(Month >= "2019-01-01")
 
-write_csv(qech_pef_by_month, '2022.09.14.qech_pef_results_per_month.csv')
+write_csv(qech_pef_by_month, 'data/2022.09.14.qech_pef_results_per_month.csv')
 ```
 
 # Sequencing confirmed typhoid incidence rate
@@ -144,7 +144,7 @@ combined_blood_cultures_by_month <- combine_by_month(tyvac_blood_cultures_by_mon
 ```{r}
 
 entire_study_period <- combine_cases_prescrip_qrdr_bc(combined_qrdr_cases_by_month, combined_cases_by_month, combined_prescrip_by_month, combined_blood_cultures_by_month, cases_start, cases_end)
-write_csv(entire_study_period, '2022.09.14.pef_typhi.cases_bc_qrdr_prescrip.csv')
+write_csv(entire_study_period, 'data/2022.09.14.pef_typhi.cases_bc_qrdr_prescrip.csv')
 ```
 
 
