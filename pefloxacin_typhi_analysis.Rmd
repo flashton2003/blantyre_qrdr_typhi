@@ -116,8 +116,8 @@ combined_cases_by_month <- left_join(combined_cases_by_month, tyvac_cases_by_mon
 combined_cases_by_month <- left_join(combined_cases_by_month, strataa_cases_by_month, by = 'Month')
 combined_cases_by_month[is.na(combined_cases_by_month)] <- 0
 
-combined_cases_by_month$total_n <- combined_cases_by_month$tyvac_n + combined_cases_by_month$strataa_n
-combined_cases_by_month$total_typhoid_per100000 <- (combined_cases_by_month$total_n / strataa_pop) * 100000
+combined_cases_by_month$total_typhoid_n <- combined_cases_by_month$tyvac_n + combined_cases_by_month$strataa_n
+combined_cases_by_month$total_typhoid_per100000 <- (combined_cases_by_month$total_typhoid_n / strataa_pop) * 100000
 
 ```
 
@@ -158,6 +158,9 @@ combined_prescrip_by_month <- left_join(combined_prescrip_by_month, strataa_pres
 # currently only including prescriptions to eligible tyvac participants, not ineligible
 # ineligible prescriptions also add to the total pressure, but it should be negligible compared with the prescriptions
 # to eligible people?
+
+combined_prescrip_by_month[is.na(combined_prescrip_by_month)] <- 0
+
 combined_prescrip_by_month$total_prescrip_n <- combined_prescrip_by_month$tyvac_eligible_ciprofloxacin_prescribed + combined_prescrip_by_month$strataa_prescrip_n
 
 combined_prescrip_by_month$total_prescrip_per_100000 <- (combined_prescrip_by_month$total_prescrip_n / strataa_pop) * 100000
@@ -181,9 +184,11 @@ combined_blood_cultures <- data.frame(Month = seq(cases_start, cases_end, "month
 combined_blood_cultures <- left_join(combined_blood_cultures, tyvac_blood_cultures_by_month, by = 'Month')
 
 combined_blood_cultures <- left_join(combined_blood_cultures, strataa_blood_cultures_by_month, by = 'Month')
+combined_blood_cultures[is.na(combined_blood_cultures)] <- 0
 
-combined_blood_cultures$total_n <- combined_blood_cultures$tyvac_bc_n + combined_blood_cultures$strataa_blood_cultures_n
-combined_blood_cultures$total_bc_per_100000 <- (combined_blood_cultures$total_n / strataa_pop) * 100000
+
+combined_blood_cultures$total_bc_n <- combined_blood_cultures$tyvac_bc_n + combined_blood_cultures$strataa_blood_cultures_n
+combined_blood_cultures$total_bc_per_100000 <- (combined_blood_cultures$total_bc_n / strataa_pop) * 100000
 
 ```
 
@@ -199,21 +204,36 @@ We will initially construct a zero-inflated negative binomial regression model t
 
 ```{r}
 run_models <- function(input_data) {
-  m1 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000,  data = input_data, family = "nbinom1")
-  #summary(m1)
-  m1_summary <- broom.mixed::tidy(m1, exponentiate = TRUE, conf.int = TRUE)
-  
-  m2 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000 + total_bc_per_100000,  data = input_data, family = "nbinom1")
-  #summary(m2)
-  m2_summary <- broom.mixed::tidy(m2, exponentiate = TRUE, conf.int = TRUE)
   
   m3 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000 + total_bc_per_100000 + total_typhoid_per100000,  data = input_data, family = "nbinom1")
   #summary(m3)
   m3_summary <- broom.mixed::tidy(m3, exponentiate = TRUE, conf.int = TRUE)
   
-  model_summaries <- list(m1_summary = m1_summary, m2_summary = m2_summary, m3_summary = m3_summary)
-  return(model_summaries)
+  return(m3_summary)
 }
+```
+
+## Marc's way
+
+Going to do one model with all the data from the entire study period. Doesn't matter about the difference in recruitment criteria between strataa and tyvac because the important thing is the number of qrdr typhi per typhoid case, and the method of detecting those was consistent.
+
+```{r}
+
+qrdr_per_month <- select(combined_qrdr_cases_by_month, c('Month', 'total_qrdr_n'))
+cases_per_month <- select(combined_cases_by_month, c('Month', 'total_typhoid_n'))
+prescriptions_per_month <- select(combined_prescrip_by_month, c('Month', 'total_prescrip_n'))
+bc_per_month <- select(combined_blood_cultures, c('Month', 'total_bc_n'))
+
+entire_recruitment_period <- data.frame(Month = seq(strataa_start, strataa_end, "months"))
+entire_recruitment_period <- left_join(entire_recruitment_period, cases_per_month, by = 'Month')
+entire_recruitment_period <- left_join(entire_recruitment_period, prescriptions_per_month, by = 'Month')
+entire_recruitment_period <- left_join(entire_recruitment_period, qrdr_per_month, by = 'Month')
+entire_recruitment_period <- left_join(entire_recruitment_period, bc_per_month, by = 'Month')
+
+m <- glmmTMB(total_qrdr_n ~ total_prescrip_n + total_bc_n + offset(total_typhoid_n),  data = entire_recruitment_period, family = "nbinom1")
+summary(m)
+m_summary <- broom.mixed::tidy(m, exponentiate = TRUE, conf.int = TRUE)
+m_summary
 ```
 
 ## Combined tyvac_strataa period
@@ -253,9 +273,7 @@ Run models
 ```{r run_models}
 
 model_summaries <- run_models(strataa_tyvac_recruitment_period)
-model_summaries$m1_summary %>% kbl() %>% kable_styling()
-model_summaries$m2_summary %>% kbl() %>% kable_styling()
-model_summaries$m3_summary %>% kbl() %>% kable_styling()
+model_summaries %>% kbl() %>% kable_styling()
 
 ```
 
@@ -293,13 +311,10 @@ Per 100,000 people over the STRATAA study period there were:
 * `r s_bc` blood cultures
 
 
-
 ```{r run_strataa_models}
 
 model_summaries <- run_models(strataa_recruitment_period)
-model_summaries$m1_summary %>% kbl() %>% kable_styling()
-model_summaries$m2_summary %>% kbl() %>% kable_styling()
-model_summaries$m3_summary %>% kbl() %>% kable_styling()
+model_summaries %>% kbl() %>% kable_styling()
 
 ```
 
