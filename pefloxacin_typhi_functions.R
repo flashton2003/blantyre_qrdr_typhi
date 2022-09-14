@@ -1,5 +1,7 @@
 
 
+line_list_handle <- "~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.09.08/2022.09.08 line list.xlsx"
+
 read_all_typhi <- function(line_list_handle){
   all_typhi <- read_excel(line_list_handle, col_types = c("text", "text", "text", "text",
                                                           "text", "date", "text", "text", "numeric", 
@@ -71,6 +73,51 @@ combine_cases_prescrip_qrdr_bc <- function(combined_qrdr_cases_by_month, combine
 
 
 
+plot_typh_presc_qrdr_bc_per100000 <- function(input_data) {
+  typhoid_graph <- ggplot(input_data, aes(x = Month, y = total_typhoid_per100000)) + 
+    geom_bar(stat = "identity") + 
+    ylab('Sequencing confirmed typhoid\nper 100,000 people')
+  
+  cipro_prescrip_graph <- ggplot(input_data, aes(x = Month, y = total_prescrip_per_100000)) + 
+    geom_bar(stat = "identity") + 
+    ylab('Ciprofloxacin prescriptions\nper 100,000 people')
+  
+  qrdr_graph <- ggplot(input_data, aes(x = Month, y = total_qrdr_incidence_per_100000)) + 
+    geom_bar(stat = "identity") +
+    ylab('S. Typhi with QRDR mutations\nper 100,000 people')
+  
+  bc_graph <- ggplot(input_data, aes(x = Month, y = total_bc_per_100000)) + 
+    geom_bar(stat = "identity") +
+    ylab('Number of blood cultures\nper 100,000 people')
+  
+  p <- typhoid_graph / cipro_prescrip_graph / qrdr_graph / bc_graph + plot_layout(heights = c(5,5,5,5))
+  
+  return(p)
+}
+
+plot_typh_presc_qrdr_bc_n <- function(input_data) {
+  typhoid_graph <- ggplot(input_data, aes(x = Month, y = total_typhoid_n)) + 
+    geom_bar(stat = "identity") + 
+    ylab('# Sequencing confirmed typhoid')
+  
+  cipro_prescrip_graph <- ggplot(input_data, aes(x = Month, y = total_prescrip_n)) + 
+    geom_bar(stat = "identity") + 
+    ylab('# Ciprofloxacin prescriptions')
+  
+  qrdr_graph <- ggplot(input_data, aes(x = Month, y = total_qrdr_n)) + 
+    geom_bar(stat = "identity") +
+    ylab('# S. Typhi with QRDR mutations')
+  
+  bc_graph <- ggplot(input_data, aes(x = Month, y = total_bc_n)) + 
+    geom_bar(stat = "identity") +
+    ylab('# blood cultures')
+  
+  p <- typhoid_graph / cipro_prescrip_graph / qrdr_graph / bc_graph + plot_layout(heights = c(5,5,5,5))
+  
+  return(p)
+  
+  
+}
 
 
 

@@ -16,26 +16,16 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 In this document we are analysing Salmonella Typhi from the STRATAA and TyVAC studies. In particular, we are interested in the relationship between QRDR S. Typhi (i.e. Typhi that has mutations in the quinolone resistance determining regions) and the number of ciprofloxacin prescriptions. Other co-variables included in the model are: number of typhoid cases and number of blood cultures carried out.
 
-# Todo/questions
-
-1. What part of the current model specification specifies a zero-inflated model?
-2. Should the co-variable be the total number of typhi, or the total number of typhi that don't have the QRDR mutation?
-3. Need to do the serial autocorrelation analysis
-
 # Libraries & function imports
 
 ```{r message=FALSE}
 library(tidyverse)
 library(readxl)
-library(broom)
-library(lubridate)
+#library(lubridate)
 #library(here)
-library(glmmTMB)
-library(tsibble)
-library(feasts)
-library(trending)
-library(patchwork)
-library(kableExtra)
+#library(tsibble)
+#library(feasts)
+#library(trending)
 
 source('pefloxacin_typhi_functions.R')
 ```
@@ -47,10 +37,10 @@ source('pefloxacin_typhi_functions.R')
 ```{r KeyVariables}
 tyvac_pop <- 17695 # 
 strataa_pop <- 102242 # 
-tyvac_strataa_start <- as.Date('2018-05-01')
-tyvac_strataa_end <- as.Date('2019-10-01')
-strataa_start <- as.Date('2016-11-01')
-strataa_end <- as.Date('2019-10-31')
+#tyvac_strataa_start <- as.Date('2018-05-01')
+#tyvac_strataa_end <- as.Date('2019-10-01')
+#strataa_start <- as.Date('2016-11-01')
+#strataa_end <- as.Date('2019-10-31')
 ```
 
 # Import data
@@ -64,7 +54,6 @@ Todo:
 
 ```{r ImportData}
 
-line_list_handle <- "~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.09.08/2022.09.08 line list.xlsx"
 all_typhi <- read_all_typhi(line_list_handle)
 
 strataa_prescriptions_handle <- "/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.01 strataa_ndirande_prescribed from James Meiring.csv"
@@ -77,6 +66,19 @@ tyvac_blood_cultures_by_month <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxa
 strataa_blood_cultures <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.11.12/STRATAA.ps_enrolment.date_only.csv", col_types = cols(ps12_dov = col_date(format = "%Y-%m-%d")))
 strataa_blood_cultures$Month <- as.Date(cut(strataa_blood_cultures$ps12_dov, breaks = "month"))
 
+```
+
+# QECH pef testing results
+
+```{r}
+
+all_typhi <- read_all_typhi(line_list_handle)
+
+qech_pef_tested_typhi <- all_typhi %>% filter(grepl('QECH', Study)) %>% filter(!is.na(`Cipro MIC res?`))
+qech_pef_by_month <- qech_pef_tested_typhi %>% group_by(Month, `Cipro MIC res?`) %>% summarise(n = n())
+qech_pef_by_month <- qech_pef_by_month %>% filter(Month >= "2019-01-01")
+
+write_csv(qech_pef_by_month, '2022.09.14.qech_pef_results_per_month.csv')
 ```
 
 # Sequencing confirmed typhoid incidence rate
@@ -144,206 +146,6 @@ combined_blood_cultures_by_month <- combine_by_month(tyvac_blood_cultures_by_mon
 entire_study_period <- combine_cases_prescrip_qrdr_bc(combined_qrdr_cases_by_month, combined_cases_by_month, combined_prescrip_by_month, combined_blood_cultures_by_month, cases_start, cases_end)
 write_csv(entire_study_period, '2022.09.14.pef_typhi.cases_bc_qrdr_prescrip.csv')
 ```
-
-# Investigating associations
-## define function to run models
-
-From PeterMacP:
-
-"Model 1: Here we are testing the hypothesis that increased month prescriptions of ciprofloxacin was associated with increased numbers of cases of drug resistant typhoid.
-
-We will initially construct a zero-inflated negative binomial regression model to investigate this association. We select the zero-inflated negative binomial distributional family because it is likely that the data are overdispersed, and because of the excess zero months."
-
-```{r}
-run_models <- function(input_data) {
-  
-  m3 <- glmmTMB(total_qrdr_incidence_per_100000 ~ total_prescrip_per_100000 + total_bc_per_100000 + total_typhoid_per100000,  data = input_data, family = "nbinom1")
-  #summary(m3)
-  m3_summary <- broom.mixed::tidy(m3, exponentiate = TRUE, conf.int = TRUE)
-  
-  return(m3_summary)
-}
-```
-
-## Marc's way
-
-Going to do one model with all the data from the entire study period. Doesn't matter about the difference in recruitment criteria between strataa and tyvac because the important thing is the number of qrdr typhi per typhoid case, and the method of detecting those was consistent.
-
-```{r}
-
-
-
-m <- glmmTMB(total_qrdr_n ~ total_prescrip_n + total_bc_n + offset(total_typhoid_n),  data = entire_recruitment_period, family = "nbinom1")
-summary(m)
-m_summary <- broom.mixed::tidy(m, exponentiate = TRUE, conf.int = TRUE)
-m_summary
-```
-
-## Combined tyvac_strataa period
-
-Make a dataframe for just the time period that was shared by strataa and tyvac. Then extract the total incidence (the combined strataa and tyvac cases). Then combine all together into a neat data frame.
-
-```{r}
-strataa_tyvac_recruitment_period <- data.frame(Month = seq(tyvac_strataa_start, tyvac_strataa_end, "months")) 
-
-cases_incidence_per_month <- select(combined_cases_by_month, c('Month', 'total_typhoid_per100000'))
-prescriptions_incidence_per_month <- select(combined_prescrip_by_month, c('Month', 'total_prescrip_per_100000'))
-qrdr_incidence_per_month <- select(combined_qrdr_cases_by_month, c('Month', 'total_qrdr_incidence_per_100000'))
-bc_incidence_per_month <- select(combined_blood_cultures, c('Month', 'total_bc_per_100000'))
-
-strataa_tyvac_recruitment_period <- left_join(strataa_tyvac_recruitment_period, cases_incidence_per_month, by = 'Month')
-strataa_tyvac_recruitment_period <- left_join(strataa_tyvac_recruitment_period, prescriptions_incidence_per_month, by = 'Month')
-strataa_tyvac_recruitment_period <- left_join(strataa_tyvac_recruitment_period, qrdr_incidence_per_month, by = 'Month')
-strataa_tyvac_recruitment_period <- left_join(strataa_tyvac_recruitment_period, bc_incidence_per_month, by = 'Month')
-
-st_typh <- sum(strataa_tyvac_recruitment_period$total_typhoid_per100000)
-st_prescrip <- sum(strataa_tyvac_recruitment_period$total_prescrip_per_100000)
-st_qrdr <- sum(strataa_tyvac_recruitment_period$total_qrdr_incidence_per_100000)
-st_bc <- sum(strataa_tyvac_recruitment_period$total_bc_per_100000)
-
-```
-
-Per 100,000 people over the STRATAA|TyVAC study period there were:
-
-* `r st_typh` cases of sequencing confirmed typhoid.
-* `r st_prescrip` prescriptions of cipro
-* `r st_qrdr` QRDR typhoid (ie.. resistant)
-* `r st_bc` blood cultures
-
-
-Run models
-
-```{r run_models}
-
-model_summaries <- run_models(strataa_tyvac_recruitment_period)
-model_summaries %>% kbl() %>% kable_styling()
-
-```
-
-## STRATAA only
-
-```{r}
-strataa_recruitment_period <- data.frame(Month = seq(strataa_start, strataa_end, "months"))
-
-strataa_cases_incidence_per_month <- select(strataa_cases_by_month, c('Month', 'strataa_typhoid_per100000'))
-strataa_prescriptions_incidence_per_month <- select(strataa_presc_by_month, c('Month', 'strataa_prescrip_per100000'))
-strataa_qrdr_incidence_per_month <- select(strataa_qrdr_cases_by_month, c('Month', 'strataa_qrdr_incidence_per_100000'))
-strataa_bc_incidence_per_month <- select(strataa_blood_cultures_by_month, c('Month', 'strataa_bc_per_100000'))
-
-strataa_recruitment_period <- left_join(strataa_recruitment_period, strataa_cases_incidence_per_month, by = 'Month')
-strataa_recruitment_period <- left_join(strataa_recruitment_period, strataa_prescriptions_incidence_per_month, by = 'Month')
-strataa_recruitment_period <- left_join(strataa_recruitment_period, strataa_qrdr_incidence_per_month, by = 'Month')
-strataa_recruitment_period <- left_join(strataa_recruitment_period, strataa_bc_incidence_per_month, by = 'Month')
-
-strataa_recruitment_period[is.na(strataa_recruitment_period)] <- 0
-
-strataa_recruitment_period <- strataa_recruitment_period %>% rename(total_typhoid_per100000 = strataa_typhoid_per100000, total_qrdr_incidence_per_100000 = strataa_qrdr_incidence_per_100000, total_prescrip_per_100000 = strataa_prescrip_per100000, total_bc_per_100000 = strataa_bc_per_100000)
-
-s_typh <- sum(strataa_recruitment_period$total_typhoid_per100000)
-s_prescrip <- sum(strataa_recruitment_period$total_prescrip_per_100000)
-s_qrdr <- sum(strataa_recruitment_period$total_qrdr_incidence_per_100000)
-s_bc <- sum(strataa_recruitment_period$total_bc_per_100000)
-
-```
-
-Per 100,000 people over the STRATAA study period there were:
-
-* `r s_typh` cases of sequencing confirmed typhoid.
-* `r s_prescrip` prescriptions of cipro
-* `r s_qrdr` QRDR typhoid (ie.. resistant)
-* `r s_bc` blood cultures
-
-
-```{r run_strataa_models}
-
-model_summaries <- run_models(strataa_recruitment_period)
-model_summaries %>% kbl() %>% kable_styling()
-
-```
-
-
-
-# Graphs
-## Figure 1
-
-This is a figure of the number of S. Typhi at QECH that were cipro sensitive and DCS.
-
-```{r Figure1}
-
-pef_tested_qech_typhi <- all_typhi %>% filter(grepl('QECH', Study)) %>% filter(!is.na(`Cipro MIC res?`))
-pef_by_month <- pef_tested_qech_typhi %>% group_by(Month, `Cipro MIC res?`) %>% summarise(n = n())
-pef_by_month <- pef_by_month %>% filter(Month >= "2019-01-01")
-
-ggplot(pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`)) + 
-  geom_bar(stat = "identity") + 
-  ylab("Number of samples") +
-  theme(axis.text=element_text(size=12), axis.title=element_text(size=14))
-
-ggplot(pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`, label = n)) + 
-  geom_bar(position = 'fill', stat = "identity") + 
-  ylab("Number of samples") +
-  theme(axis.text=element_text(size=12), axis.title=element_text(size=14))
-```
-
-### Numbers for Figure 1
-
-```{r}
-total_qech_typhi_tested <- sum(pef_by_month$n)
-total_qech_typhi_dcs_or_r <- filter(pef_by_month, `Cipro MIC res?` == 'DCS' | `Cipro MIC res?` == 'R' ) %>% pull(n) %>% sum
-```
-
-There were `r total_qech_typhi_tested` total qech typhi tested, and `r total_qech_typhi_dcs_or_r` DCS or R.
-
-
-## Figure 2
-
-Graphs of the combined strataa_tyvac_recruitment_period.
-
-```{r}
-plot_typh_presc_qrdr_bc <- function(input_data) {
-  typhoid_graph <- ggplot(input_data, aes(x = Month, y = total_typhoid_per100000)) + 
-    geom_bar(stat = "identity") + 
-    ylab('Sequencing confirmed typhoid\nper 100,000 people')
-
-  cipro_prescrip_graph <- ggplot(input_data, aes(x = Month, y = total_prescrip_per_100000)) + 
-    geom_bar(stat = "identity") + 
-    ylab('Ciprofloxacin prescriptions\nper 100,000 people')
-
-  qrdr_graph <- ggplot(input_data, aes(x = Month, y = total_qrdr_incidence_per_100000)) + 
-    geom_bar(stat = "identity") +
-    ylab('S. Typhi with QRDR mutations\nper 100,000 people')
-
-  bc_graph <- ggplot(input_data, aes(x = Month, y = total_bc_per_100000)) + 
-    geom_bar(stat = "identity") +
-    ylab('Number of blood cultures\nper 100,000 people')
-
-  p <- typhoid_graph / cipro_prescrip_graph / qrdr_graph / bc_graph + plot_layout(heights = c(5,5,5,5))
-
-  return(p)
-  
-  
-}
-```
-
-Plot STRATAA only
-
-```{r, fig.width = 6, fig.height = 12}
-
-strataa_only_tpqb_graph <- plot_typh_presc_qrdr_bc(strataa_recruitment_period) # tpqb stands for typhoid, prescriptions, qrdr and blood cultures
-strataa_only_tpqb_graph + plot_annotation('STRATAA only')
-
-```
-
-Plot Strataa tyvac overlap
-
-```{r fig.width = 6, fig.height = 12}
-
-strataa_and_tyvac_tpqb_graph <- plot_typh_presc_qrdr_bc(strataa_tyvac_recruitment_period)
-strataa_and_tyvac_tpqb_graph + plot_annotation('STRATAA and tyvac')
-
-```
-
-
 
 
 
