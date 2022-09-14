@@ -96,7 +96,7 @@ strataa_cases_by_month$strataa_typhoid_per100000 <- (strataa_cases_by_month$stra
 cases_start <- min(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
 cases_end <- max(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
 
-combined_cases_by_month <- combine_cases_by_month(tyvac_cases_by_month, strataa_cases_by_month, cases_start, cases_end)
+combined_cases_by_month <- combine_by_month(tyvac_cases_by_month, strataa_cases_by_month, cases_start, cases_end, 'cases')
 
 ```
 
@@ -112,7 +112,7 @@ tyvac_qrdr <- tyvac_cases %>% filter(any_qrdr == 'QRDR')
 tyvac_qrdr_cases_by_month <- tyvac_qrdr  %>% group_by(Month) %>% summarise(tyvac_qrdr_n = n())
 
 
-
+combined_qrdr_cases_by_month <- combine_by_month(tyvac_qrdr_cases_by_month, strataa_qrdr_cases_by_month, cases_start, cases_end, 'qrdr')
 
 
 ```
@@ -121,28 +121,9 @@ tyvac_qrdr_cases_by_month <- tyvac_qrdr  %>% group_by(Month) %>% summarise(tyvac
 
 ```{r}
 strataa_presc_by_month <- strataa_prescriptions %>% group_by(Month) %>% summarise(strataa_prescrip_n = n())
-#ggplot(strataa_prescriptions)
 strataa_presc_by_month$strataa_prescrip_per100000 <- (strataa_presc_by_month$strataa_prescrip_n / strataa_pop) * 100000
 
-combined_prescrip_by_month <- data.frame(Month = seq(cases_start, cases_end, "months")) 
-combined_prescrip_by_month <- left_join(combined_prescrip_by_month, tyvac_presc_by_month, by = 'Month')
-combined_prescrip_by_month <- left_join(combined_prescrip_by_month, strataa_presc_by_month, by = 'Month')
-# currently only including prescriptions to eligible tyvac participants, not ineligible
-# ineligible prescriptions also add to the total pressure, but it should be negligible compared with the prescriptions
-# to eligible people?
-
-combined_prescrip_by_month[is.na(combined_prescrip_by_month)] <- 0
-
-combined_prescrip_by_month$total_prescrip_n <- combined_prescrip_by_month$tyvac_eligible_ciprofloxacin_prescribed + combined_prescrip_by_month$strataa_prescrip_n
-
-combined_prescrip_by_month$total_prescrip_per_100000 <- (combined_prescrip_by_month$total_prescrip_n / strataa_pop) * 100000
-
-#tyvacpresc_by_month$tyvac_prescrip_eligible_per100000 <- (tyvacpresc_by_month$tyvac_eligible_ciprofloxacin_prescribed / tyvac_pop) * 100000
-#tyvacpresc_by_month$tyvac_prescrip_not_eligible_per100000 <- (tyvacpresc_by_month$tyvac_not_eligible_ciprofloxacin_prescribed / tyvac_pop) * 100000
-
-#prescrip_end <- max(strataa_prescriptions$Month, tyvacpresc_by_month$Month)
-##prescrip_start <- min(strataa_prescriptions$Month, tyvacpresc_by_month$Month)
-
+combined_prescrip_by_month <- combine_by_month(tyvac_presc_by_month, strataa_presc_by_month, cases_start, cases_end, 'prescrip')
 ```
 
 # Getting the number of blood cultures
@@ -152,25 +133,24 @@ combined_prescrip_by_month$total_prescrip_per_100000 <- (combined_prescrip_by_mo
 strataa_blood_cultures_by_month <- strataa_blood_cultures %>% group_by(Month) %>% summarise(strataa_blood_cultures_n = n())
 strataa_blood_cultures_by_month$strataa_bc_per_100000 <- (strataa_blood_cultures_by_month$strataa_blood_cultures_n / strataa_pop) * 100000
 
-combined_blood_cultures <- data.frame(Month = seq(cases_start, cases_end, "months"))
-combined_blood_cultures <- left_join(combined_blood_cultures, tyvac_blood_cultures_by_month, by = 'Month')
-
-combined_blood_cultures <- left_join(combined_blood_cultures, strataa_blood_cultures_by_month, by = 'Month')
-combined_blood_cultures[is.na(combined_blood_cultures)] <- 0
-
-
-combined_blood_cultures$total_bc_n <- combined_blood_cultures$tyvac_bc_n + combined_blood_cultures$strataa_blood_cultures_n
-combined_blood_cultures$total_bc_per_100000 <- (combined_blood_cultures$total_bc_n / strataa_pop) * 100000
+combined_blood_cultures_by_month <- combine_by_month(tyvac_blood_cultures_by_month, strataa_blood_cultures_by_month, cases_start, cases_end, 'blood_cultures')
 
 ```
 
+# Make a clean dataframe for analysis
+
+```{r}
+
+entire_study_period <- combine_cases_prescrip_qrdr_bc(combined_qrdr_cases_by_month, combined_cases_by_month, combined_prescrip_by_month, combined_blood_cultures_by_month, cases_start, cases_end)
+write_csv(entire_study_period, '2022.09.14.pef_typhi.cases_bc_qrdr_prescrip.csv')
+```
 
 # Investigating associations
 ## define function to run models
 
 From PeterMacP:
 
-"Model 1: Here we are testing the hypothesis that increased month presciptions of ciprofloxacin was associated with increased numbers of cases of drug resistant typhoid.
+"Model 1: Here we are testing the hypothesis that increased month prescriptions of ciprofloxacin was associated with increased numbers of cases of drug resistant typhoid.
 
 We will initially construct a zero-inflated negative binomial regression model to investigate this association. We select the zero-inflated negative binomial distributional family because it is likely that the data are overdispersed, and because of the excess zero months."
 
@@ -191,16 +171,7 @@ Going to do one model with all the data from the entire study period. Doesn't ma
 
 ```{r}
 
-qrdr_per_month <- select(combined_qrdr_cases_by_month, c('Month', 'total_qrdr_n'))
-cases_per_month <- select(combined_cases_by_month, c('Month', 'total_typhoid_n'))
-prescriptions_per_month <- select(combined_prescrip_by_month, c('Month', 'total_prescrip_n'))
-bc_per_month <- select(combined_blood_cultures, c('Month', 'total_bc_n'))
 
-entire_recruitment_period <- data.frame(Month = seq(strataa_start, strataa_end, "months"))
-entire_recruitment_period <- left_join(entire_recruitment_period, cases_per_month, by = 'Month')
-entire_recruitment_period <- left_join(entire_recruitment_period, prescriptions_per_month, by = 'Month')
-entire_recruitment_period <- left_join(entire_recruitment_period, qrdr_per_month, by = 'Month')
-entire_recruitment_period <- left_join(entire_recruitment_period, bc_per_month, by = 'Month')
 
 m <- glmmTMB(total_qrdr_n ~ total_prescrip_n + total_bc_n + offset(total_typhoid_n),  data = entire_recruitment_period, family = "nbinom1")
 summary(m)
