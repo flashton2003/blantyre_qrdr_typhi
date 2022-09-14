@@ -25,24 +25,53 @@ read_strataa_prescriptions <- function(strataa_prescriptions_handle){
 }
 
 
-combine_cases_by_month <- function(tyvac_cases_by_month, strataa_cases_by_month, cases_start, cases_end){
+combine_by_month <- function(tyvac_by_month, strataa_by_month, cases_start, cases_end, input_type){
   # get the official start date of tyvac, as this will determine the start period
-  combined_cases_by_month <- data.frame(Month = seq(cases_start, cases_end, "months")) 
+  combined_by_month <- data.frame(Month = seq(cases_start, cases_end, "months")) 
   #combined_by_month <- combined_by_month %>% rename(V1 = Month)
-  combined_cases_by_month <- left_join(combined_cases_by_month, tyvac_cases_by_month, by = 'Month')
-  combined_cases_by_month <- left_join(combined_cases_by_month, strataa_cases_by_month, by = 'Month')
-  combined_cases_by_month[is.na(combined_cases_by_month)] <- 0
+  combined_by_month <- left_join(combined_by_month, tyvac_by_month, by = 'Month')
+  combined_by_month <- left_join(combined_by_month, strataa_by_month, by = 'Month')
+  combined_by_month[is.na(combined_by_month)] <- 0
+  if (input_type == 'qrdr'){
+    combined_by_month$total_qrdr_n <- combined_by_month$strataa_qrdr_n + combined_by_month$tyvac_qrdr_n
+    combined_by_month$total_qrdr_incidence_per_100000 <- (combined_by_month$total_qrdr_n / strataa_pop) * 100000
+  }
+  else if (input_type == 'cases'){
+    combined_by_month$total_typhoid_n <- combined_by_month$tyvac_n + combined_by_month$strataa_n
+    combined_by_month$total_typhoid_per100000 <- (combined_by_month$total_typhoid_n / strataa_pop) * 100000
+  }
+  else if(input_type == 'prescrip'){
+    combined_by_month$total_prescrip_n <- combined_by_month$tyvac_eligible_ciprofloxacin_prescribed + combined_by_month$strataa_prescrip_n
+    combined_by_month$total_prescrip_per_100000 <- (combined_by_month$total_prescrip_n / strataa_pop) * 100000
+  }
+  else if(input_type == 'blood_cultures'){
+    combined_by_month$total_bc_n <- combined_by_month$tyvac_bc_n + combined_by_month$strataa_blood_cultures_n
+    combined_by_month$total_bc_per_100000 <- (combined_by_month$total_bc_n / strataa_pop) * 100000
+  }
+  else{
+    stop('ERROR - input_type argument needs to be one of (qrdr, cases, prescrip, blood_cultures)')
+  }
   
-  combined_cases_by_month$total_typhoid_n <- combined_cases_by_month$tyvac_n + combined_cases_by_month$strataa_n
-  combined_cases_by_month$total_typhoid_per100000 <- (combined_cases_by_month$total_typhoid_n / strataa_pop) * 100000
-  return(combined_cases_by_month)
+  return(combined_by_month)
 }
 
-combine_qrdr_by_month <- function(){
-  combined_qrdr_cases_by_month <- data.frame(Month = seq(cases_start, cases_end, "months")) 
-  combined_qrdr_cases_by_month <- left_join(combined_qrdr_cases_by_month, strataa_qrdr_cases_by_month, by = 'Month')
-  combined_qrdr_cases_by_month <- left_join(combined_qrdr_cases_by_month, tyvac_qrdr_cases_by_month, by = 'Month')
-  combined_qrdr_cases_by_month[is.na(combined_qrdr_cases_by_month)] <- 0
-  combined_qrdr_cases_by_month$total_qrdr_n <- combined_qrdr_cases_by_month$strataa_qrdr_n + combined_qrdr_cases_by_month$tyvac_qrdr_n
-  combined_qrdr_cases_by_month$total_qrdr_incidence_per_100000 <- (combined_qrdr_cases_by_month$total_qrdr_n / strataa_pop) * 100000
+combine_cases_prescrip_qrdr_bc <- function(combined_qrdr_cases_by_month, combined_cases_by_month, combined_prescrip_by_month, combined_blood_cultures_by_month, cases_start, cases_end){
+  qrdr_per_month <- select(combined_qrdr_cases_by_month, c('Month', 'total_qrdr_n'))
+  cases_per_month <- select(combined_cases_by_month, c('Month', 'total_typhoid_n'))
+  prescriptions_per_month <- select(combined_prescrip_by_month, c('Month', 'total_prescrip_n'))
+  bc_per_month <- select(combined_blood_cultures_by_month, c('Month', 'total_bc_n'))
+  
+  entire_recruitment_period <- data.frame(Month = seq(cases_start, cases_end, "months"))
+  entire_recruitment_period <- left_join(entire_recruitment_period, cases_per_month, by = 'Month')
+  entire_recruitment_period <- left_join(entire_recruitment_period, prescriptions_per_month, by = 'Month')
+  entire_recruitment_period <- left_join(entire_recruitment_period, qrdr_per_month, by = 'Month')
+  entire_recruitment_period <- left_join(entire_recruitment_period, bc_per_month, by = 'Month')
+  return(entire_recruitment_period)
 }
+
+
+
+
+
+
+
