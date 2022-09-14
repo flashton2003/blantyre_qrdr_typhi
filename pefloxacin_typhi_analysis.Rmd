@@ -22,7 +22,7 @@ In this document we are analysing Salmonella Typhi from the STRATAA and TyVAC st
 2. Should the co-variable be the total number of typhi, or the total number of typhi that don't have the QRDR mutation?
 3. Need to do the serial autocorrelation analysis
 
-# Libraries
+# Libraries & function imports
 
 ```{r message=FALSE}
 library(tidyverse)
@@ -36,6 +36,8 @@ library(feasts)
 library(trending)
 library(patchwork)
 library(kableExtra)
+
+source('pefloxacin_typhi_functions.R')
 ```
 
 # Key variables
@@ -63,27 +65,13 @@ Todo:
 ```{r ImportData}
 
 line_list_handle <- "~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.09.08/2022.09.08 line list.xlsx"
+all_typhi <- read_all_typhi(line_list_handle)
 
-all_typhi <- read_excel(line_list_handle, col_types = c("text", "text", "text", "text",
-        "text", "date", "text", "text", "numeric", 
-        "text", "text", "text", "text", "text", 
-        "text", "text", "text", "numeric", 
-        "text", "text", "text", "text", "text", 
-        "text", "text", "text", "text", "text", "text"))
+strataa_prescriptions_handle <- "/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.01 strataa_ndirande_prescribed from James Meiring.csv"
+strataa_prescriptions <- read_strataa_prescriptions(strataa_prescriptions_handle)
 
-all_typhi$Month <- as.Date(cut(all_typhi$`Properly formatted date`, breaks = "month"))
-# Note starts with "Ignore" if there is some reason the sample should be ignored
-all_typhi <- all_typhi %>% mutate(any_qrdr = ifelse(is.na(QRDR), NA, "QRDR")) %>% filter(!grepl("^Ignore", Note))
-
-# ps12_dov is the date of visit
-strataa_prescriptions <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.01 strataa_ndirande_prescribed from James Meiring.csv", col_types = cols(ps12_dov = col_datetime(format = "%d/%m/%Y %H:%M")))
-strataa_prescriptions$Month <- as.Date(cut(strataa_prescriptions$ps12_dov, breaks = "month"))
-# ps44_cipro is 1 if cipro was prescribed
-strataa_prescriptions <- strataa_prescriptions %>% filter(ps44_cipro == 1)
-
-# this data is already tabulated by month
-tyvacpresc_by_month <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.08 cipro prescriptions.csv", col_types = cols(Month = col_date(format = "%d/%m/%Y")))
-
+# these data is already tabulated by month
+tyvac_presc_by_month <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.08 cipro prescriptions.csv", col_types = cols(Month = col_date(format = "%d/%m/%Y")))
 tyvac_blood_cultures_by_month <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.11.12/TyVAC monthly BC.csv", col_types = cols(date = col_date(format = "%Y-%m-%d"))) %>% rename('Month' = 'date', 'tyvac_bc_n' = 'BC collected')
 
 strataa_blood_cultures <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.11.12/STRATAA.ps_enrolment.date_only.csv", col_types = cols(ps12_dov = col_date(format = "%Y-%m-%d")))
@@ -108,15 +96,7 @@ strataa_cases_by_month$strataa_typhoid_per100000 <- (strataa_cases_by_month$stra
 cases_start <- min(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
 cases_end <- max(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
 
-# get the official start date of tyvac, as this will determine the start period
-combined_cases_by_month <- data.frame(Month = seq(cases_start, cases_end, "months")) 
-#combined_by_month <- combined_by_month %>% rename(V1 = Month)
-combined_cases_by_month <- left_join(combined_cases_by_month, tyvac_cases_by_month, by = 'Month')
-combined_cases_by_month <- left_join(combined_cases_by_month, strataa_cases_by_month, by = 'Month')
-combined_cases_by_month[is.na(combined_cases_by_month)] <- 0
-
-combined_cases_by_month$total_typhoid_n <- combined_cases_by_month$tyvac_n + combined_cases_by_month$strataa_n
-combined_cases_by_month$total_typhoid_per100000 <- (combined_cases_by_month$total_typhoid_n / strataa_pop) * 100000
+combined_cases_by_month <- combine_cases_by_month(tyvac_cases_by_month, strataa_cases_by_month, cases_start, cases_end)
 
 ```
 
@@ -131,16 +111,9 @@ strataa_qrdr_cases_by_month$strataa_qrdr_incidence_per_100000 <- (strataa_qrdr_c
 tyvac_qrdr <- tyvac_cases %>% filter(any_qrdr == 'QRDR')
 tyvac_qrdr_cases_by_month <- tyvac_qrdr  %>% group_by(Month) %>% summarise(tyvac_qrdr_n = n())
 
-combined_qrdr_cases_by_month <- data.frame(Month = seq(cases_start, cases_end, "months")) 
 
-combined_qrdr_cases_by_month <- left_join(combined_qrdr_cases_by_month, strataa_qrdr_cases_by_month, by = 'Month')
-combined_qrdr_cases_by_month <- left_join(combined_qrdr_cases_by_month, tyvac_qrdr_cases_by_month, by = 'Month')
 
-combined_qrdr_cases_by_month[is.na(combined_qrdr_cases_by_month)] <- 0
 
-combined_qrdr_cases_by_month$total_qrdr_n <- combined_qrdr_cases_by_month$strataa_qrdr_n + combined_qrdr_cases_by_month$tyvac_qrdr_n
-
-combined_qrdr_cases_by_month$total_qrdr_incidence_per_100000 <- (combined_qrdr_cases_by_month$total_qrdr_n / strataa_pop) * 100000
 
 ```
 
@@ -152,7 +125,7 @@ strataa_presc_by_month <- strataa_prescriptions %>% group_by(Month) %>% summaris
 strataa_presc_by_month$strataa_prescrip_per100000 <- (strataa_presc_by_month$strataa_prescrip_n / strataa_pop) * 100000
 
 combined_prescrip_by_month <- data.frame(Month = seq(cases_start, cases_end, "months")) 
-combined_prescrip_by_month <- left_join(combined_prescrip_by_month, tyvacpresc_by_month, by = 'Month')
+combined_prescrip_by_month <- left_join(combined_prescrip_by_month, tyvac_presc_by_month, by = 'Month')
 combined_prescrip_by_month <- left_join(combined_prescrip_by_month, strataa_presc_by_month, by = 'Month')
 # currently only including prescriptions to eligible tyvac participants, not ineligible
 # ineligible prescriptions also add to the total pressure, but it should be negligible compared with the prescriptions
