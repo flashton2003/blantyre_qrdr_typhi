@@ -1,0 +1,122 @@
+---
+title: "pefloxacin typhi analysis and figures"
+author: "Philip Ashton"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# Libraries
+
+```{r message=FALSE}
+library(tidyverse)
+library(glmmTMB)
+library(patchwork)
+library(kableExtra)
+library(broom)
+
+source('pefloxacin_typhi_functions.R')
+```
+
+# Read in data
+
+```{r}
+cases_bc_qrdr_prescrip_handle <- '2022.09.14.pef_typhi.cases_bc_qrdr_prescrip.csv'
+qech_pef_by_month_handle <- '2022.09.14.qech_pef_results_per_month.csv' 
+```
+
+Data has been pulled in from various sources and cleaned using `pefloxacin_typhi_data_cleaning.Rmd`. The clean data has been saved as `r cases_bc_qrdr_prescrip_handle`.
+
+```{r}
+
+entire_recruitment_period <- read_csv(cases_bc_qrdr_prescrip_handle)
+
+```
+
+# Data summary
+
+Make a dataframe for just the time period that was shared by strataa and tyvac. Then extract the total incidence (the combined strataa and tyvac cases). Then combine all together into a neat data frame.
+
+```{r}
+typh_n <- sum(entire_recruitment_period$total_typhoid_n)
+prescrip_n <- sum(entire_recruitment_period$total_prescrip_n)
+qrdr_n <- sum(entire_recruitment_period$total_qrdr_n)
+bc_n <- sum(entire_recruitment_period$total_bc_n)
+```
+
+
+In total, over the entire study period there were:
+
+* `r typh_n` cases of sequencing confirmed typhoid.
+* `r prescrip_n` prescriptions of cipro
+* `r qrdr_n` QRDR typhoid (i.e. resistant)
+* `r format(bc_n, scientific=FALSE)` blood cultures
+
+
+# Investigating associations
+
+After discussion with Marc, want to do one model with all the data from the entire study period. It doesn't matter about the difference in recruitment criteria between strataa and tyvac because the important thing is the number of qrdr typhi per typhoid case, and the method of detecting those was consistent.
+
+Questions:
+
+* How to handle the number of prescriptions and the number of blood cultures between TyVAC and STRATAA? The denominator is not the same here so how to combine?
+* `ziformula = ~.` produces a warning about `Model convergence problem; non-positive-definite Hessian matrix.`, and the results are generally `NaN`.
+
+```{r}
+m <- glmmTMB(total_qrdr_n ~ total_prescrip_n + total_bc_n + offset(total_typhoid_n),  data = entire_recruitment_period, family = "nbinom2", ziformula = ~.)
+summary(m)
+#m_summary <- broom.mixed::tidy(m, exponentiate = TRUE, conf.int = TRUE)
+#m_summary  %>% kbl() %>% kable_styling()
+```
+
+
+
+Todo:
+
+1. Need to do the serial autocorrelation analysis
+2. 
+
+# Graphs
+## Figure 1
+
+This is a figure of the number of S. Typhi at QECH that were cipro sensitive and DCS.
+
+```{r Figure1}
+
+qech_pef_by_month <- read_csv(qech_pef_by_month_handle)
+
+ggplot(qech_pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`)) + 
+  geom_bar(stat = "identity") + 
+  ylab("Number of samples") +
+  theme(axis.text=element_text(size=12), axis.title=element_text(size=14))
+
+ggplot(qech_pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`, label = n)) + 
+  geom_bar(position = 'fill', stat = "identity") + 
+  ylab("Number of samples") +
+  theme(axis.text=element_text(size=12), axis.title=element_text(size=14))
+```
+
+### Numbers for Figure 1
+
+```{r}
+total_qech_typhi_tested <- sum(qech_pef_by_month$n)
+total_qech_typhi_dcs_or_r <- filter(qech_pef_by_month, `Cipro MIC res?` == 'DCS' | `Cipro MIC res?` == 'R' ) %>% pull(n) %>% sum
+```
+
+There were `r total_qech_typhi_tested` total qech typhi tested, and `r total_qech_typhi_dcs_or_r` DCS or R.
+
+
+## Figure 2
+
+Graphs of the counts of typhi cases, qrdr cases, cipro prescriptions and blood cultures from the entire strataa/tyvac recruitment period.
+
+```{r, fig.width = 6, fig.height = 12}
+
+
+entire_period_tpqb_graph <- plot_typh_presc_qrdr_bc_n(entire_recruitment_period) # tpqb stands for typhoid, prescriptions, qrdr and blood cultures
+entire_period_tpqb_graph + plot_annotation('Combined STRATAA & TyVAC period')
+
+```
+
+
+
+
