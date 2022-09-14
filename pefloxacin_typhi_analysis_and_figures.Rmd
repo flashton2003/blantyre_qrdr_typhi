@@ -68,12 +68,10 @@ summary(m)
 #m_summary  %>% kbl() %>% kable_styling()
 ```
 
-
-
 Todo:
 
 1. Need to do the serial autocorrelation analysis
-2. 
+2. Compare AIC of nested models, e.g. https://www.scribbr.com/statistics/akaike-information-criterion/ 
 
 # Graphs
 ## Figure 1
