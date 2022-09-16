@@ -52,9 +52,9 @@ Todo:
 * make sure excluding multiple isolates from the same person (get PIDs for both STRATAA and TyVAC)
 * get the definitive line list of all typhis from STRATAA
 
-```{r ImportData}
+```{r ImportData, warning=FALSE}
 
-all_typhi <- read_all_typhi(line_list_handle)
+one_typhi_per_patient <- get_one_typhi_per_patient(line_list_handle)
 
 strataa_prescriptions_handle <- "/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.01 strataa_ndirande_prescribed from James Meiring.csv"
 strataa_prescriptions <- read_strataa_prescriptions(strataa_prescriptions_handle)
@@ -66,15 +66,21 @@ tyvac_blood_cultures_by_month <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxa
 strataa_blood_cultures <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.11.12/STRATAA.ps_enrolment.date_only.csv", col_types = cols(ps12_dov = col_date(format = "%Y-%m-%d")))
 strataa_blood_cultures$Month <- as.Date(cut(strataa_blood_cultures$ps12_dov, breaks = "month"))
 
+all_malawian_genomes <- read_excel("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/phylo/results/2021.11.09/all_malawian/2022.08.30.pefloxacin_typhi_paper_line_list.all_malawian_for_annot.xlsx")
+
+malawi_and_zim_genomes <- read_excel("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/phylo/results/2021.11.09/malawi_and_zim_clade/prespecified_model_outlier/2021.11.09.MWI_ZIM_clade.with_outlier.annot.xlsx")
+
+malawian_and_context <- read_excel("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/phylo/results/2021.11.09/malawi_and_context/2022.08.30.pefloxcain_typhi_paper_line_list.malawi_and_context_annot.xlsx")
+
 ```
 
 # QECH pef testing results
 
 ```{r}
 
-all_typhi <- read_all_typhi(line_list_handle)
+one_typhi_per_patient <- get_one_typhi_per_patient(line_list_handle)
 
-qech_pef_tested_typhi <- all_typhi %>% filter(grepl('QECH', Study)) %>% filter(!is.na(`Cipro MIC res?`))
+qech_pef_tested_typhi <- one_typhi_per_patient %>% filter(grepl('QECH', Study)) %>% filter(!is.na(`Cipro MIC res?`))
 qech_pef_by_month <- qech_pef_tested_typhi %>% group_by(Month, `Cipro MIC res?`) %>% summarise(n = n())
 qech_pef_by_month <- qech_pef_by_month %>% filter(Month >= "2019-01-01")
 
@@ -86,12 +92,14 @@ write_csv(qech_pef_by_month, 'data/2022.09.14.qech_pef_results_per_month.csv')
 Here we filter the input line list to extract the *sequenced* tyvac samples from ndirande and the sequenced strataa samples. `cases_start` and `cases_end` are defined here.
 
 ```{r}
-tyvac_cases <- all_typhi %>% filter(Study == 'TyVAC' & `TyVAC site` == 'Ndirande'  & !is.na(`Sequenced?`))  %>% filter(`overall sequencing identification` == "Typhi")
+
+sequencing_confirmed_typhi <- one_typhi_per_patient %>% filter(!is.na(`Sequenced?`) & `overall sequencing identification` == "Typhi")
+
+tyvac_cases <- sequencing_confirmed_typhi %>% filter(Study == 'TyVAC' & `TyVAC site` == 'Ndirande')
 tyvac_cases_by_month <- tyvac_cases %>% group_by(Month) %>% summarise(tyvac_n = n())
 
 # we use grepl to find "strataa adjacent" samples as well as strataa samples.
-strataa_cases <- all_typhi %>% filter(grepl('STRATAA', Study) & !is.na(`Sequenced?`)) %>% filter(`overall sequencing identification` == "Typhi")
-
+strataa_cases <- sequencing_confirmed_typhi %>% filter(grepl('STRATAA', Study))
 strataa_cases_by_month <- strataa_cases  %>% group_by(Month) %>% summarise(strataa_n = n())
 strataa_cases_by_month$strataa_typhoid_per100000 <- (strataa_cases_by_month$strataa_n / strataa_pop) * 100000
 
@@ -148,7 +156,50 @@ write_csv(entire_study_period, 'data/2022.09.14.pef_typhi.cases_bc_qrdr_prescrip
 ```
 
 
+# Get the occurrence of the different qrdr mutations
 
+Filter to get only samples that have a QRDR mutation, that were either in tyvac-ndirande or strataa.
+
+```{r}
+strataa_tyvac_qrdr_typhi <- sequencing_confirmed_typhi %>% filter(!is.na(QRDR)) %>% filter((Study == 'TyVAC' & `TyVAC site` == 'Ndirande') | grepl('STRATAA', Study)) %>% arrange(`Properly formatted date`)
+write_csv(strataa_tyvac_qrdr_typhi, 'data/2022.09.15.strataa_tyvac_qrdr_typhi.one_per_patient.csv')
+
+```
+
+# Get the total number of sequenced S. Typhi included in each phylogeny
+
+First, the number of sequenced genomes from this study (will change after strataa paper published) and context from Malawi
+```{r}
+
+
+
+malawian_genomes_summary <- all_malawian_genomes %>% 
+  mutate(study_summary = NA) %>%
+  mutate(study_summary = ifelse(Study %in% list('wong et al., 2015', 'Mashe_et_al_2021'), 'context', study_summary)) %>% 
+  mutate(study_summary = ifelse(Study %in% list('STRATAA adjacent', 'QECH', 'TyVAC', 'STRATAA'), 'this_study', study_summary))  %>%
+  filter(!grepl('Ignore', note)) %>% 
+  group_by(Country, study_summary) %>% summarise(n = n()) %>% mutate(tree = 'all_malawian')
+
+
+malawi_zim_genomes_summary <- malawi_and_zim_genomes %>% 
+  mutate(study_summary = NA) %>%
+  mutate(study_summary = ifelse(Study %in% list('wong et al., 2015', 'Mashe_et_al_2021'), 'context', study_summary)) %>% 
+  mutate(study_summary = ifelse(Study %in% list('STRATAA adjacent', 'QECH', 'TyVAC', 'STRATAA'), 'this_study', study_summary))  %>%    
+  filter(!grepl('Ignore', note)) %>% 
+  group_by(Country, study_summary) %>% summarise(n = n()) %>% mutate(tree = 'malawi_and_zim')
+
+malawian_and_context_summary <- malawian_and_context %>% mutate(study_summary = NA) %>%
+  mutate(study_summary = ifelse(Study %in% list('wong et al., 2015', 'Mashe_et_al_2021', 'park et al., 2018'), 'context', study_summary)) %>% 
+  mutate(study_summary = ifelse(Study %in% list('STRATAA adjacent', 'QECH', 'TyVAC', 'STRATAA'), 'this_study', study_summary))  %>%  
+  filter(!grepl('Ignore', Note)) %>% 
+  group_by(`Geog for itol`, study_summary) %>% summarise(n = n()) %>% 
+  rename(Country = `Geog for itol`) %>% mutate(tree = 'malawian_and_context')
+
+all_tree_summaries <- do.call("rbind", list(malawian_genomes_summary, malawi_zim_genomes_summary, malawian_and_context_summary))
+
+write_csv(all_tree_summaries, 'data/2022.09.16.tree_summaries.csv')
+
+```
 
 
 

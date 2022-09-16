@@ -2,7 +2,7 @@
 
 line_list_handle <- "~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.09.08/2022.09.08 line list.xlsx"
 
-read_all_typhi <- function(line_list_handle){
+get_one_typhi_per_patient <- function(line_list_handle){
   all_typhi <- read_excel(line_list_handle, col_types = c("text", "text", "text", "text",
                                                           "text", "date", "text", "text", "numeric", 
                                                           "text", "text", "text", "text", "text", 
@@ -13,6 +13,7 @@ read_all_typhi <- function(line_list_handle){
   all_typhi$Month <- as.Date(cut(all_typhi$`Properly formatted date`, breaks = "month"))
   # Note starts with "Ignore" if there is some reason the sample should be ignored
   all_typhi <- all_typhi %>% mutate(any_qrdr = ifelse(is.na(QRDR), NA, "QRDR")) %>% filter(!grepl("^Ignore", Note))
+  all_typhi$`Properly formatted date`<- as.Date(all_typhi$`Properly formatted date`)
   return(all_typhi)
 }
 
@@ -53,7 +54,6 @@ combine_by_month <- function(tyvac_by_month, strataa_by_month, cases_start, case
   else{
     stop('ERROR - input_type argument needs to be one of (qrdr, cases, prescrip, blood_cultures)')
   }
-  
   return(combined_by_month)
 }
 
