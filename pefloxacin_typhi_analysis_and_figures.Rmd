@@ -122,7 +122,6 @@ entire_period_tpqb_graph + plot_annotation('Combined STRATAA & TyVAC period')
 
 ```
 
-
 ### Numbers for Figure 2
 
 ```{r}
