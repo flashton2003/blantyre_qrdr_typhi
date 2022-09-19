@@ -1,0 +1,22 @@
+Country,study_summary,n,tree
+Malawi,context,112,all_malawian
+Malawi,this_study,187,all_malawian
+Africa,context,1,malawi_and_zim
+Malawi,context,71,malawi_and_zim
+Malawi,this_study,183,malawi_and_zim
+South Africa,context,4,malawi_and_zim
+Zimbabwe,context,27,malawi_and_zim
+Africa,context,3,malawian_and_context
+Asia,context,1051,malawian_and_context
+Central Africa,context,20,malawian_and_context
+East Africa,context,224,malawian_and_context
+Europe,context,6,malawian_and_context
+Malawi,context,112,malawian_and_context
+Malawi,this_study,187,malawian_and_context
+North Africa,context,25,malawian_and_context
+North America,context,5,malawian_and_context
+Oceania,context,335,malawian_and_context
+South America,context,17,malawian_and_context
+Southern Africa,context,74,malawian_and_context
+Unknown,context,18,malawian_and_context
+West Africa,context,192,malawian_and_context
