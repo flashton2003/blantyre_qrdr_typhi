@@ -71,6 +71,24 @@ m_summary <- broom.mixed::tidy(m, exponentiate = TRUE, conf.int = TRUE)
 m_summary  %>% kbl() %>% kable_styling()
 ```
 
+```{r}
+
+
+broom.mixed::augment(m, entire_recruitment_period, scale="response")
+exp(-1.2036)
+library(sjPlot)
+
+plot_model(m, type="pred")
+
+# predict the qrdr for each month with glm.pred
+# convert the output to probability scale
+# want to make a predicted model because we have the "real world" data, but that's all confounded by the various other factors.
+# the model corrects for those confounders, and makes a prediction of the effect of the cipro prescriptions only on the number of qrdr isolated each month.
+
+
+```
+
+
 Todo:
 
 1. Need to do the serial autocorrelation analysis
