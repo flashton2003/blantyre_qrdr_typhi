@@ -59,6 +59,16 @@ one_typhi_per_patient <- get_one_typhi_per_patient(line_list_handle)
 strataa_prescriptions_handle <- "/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.01 strataa_ndirande_prescribed from James Meiring.csv"
 strataa_prescriptions <- read_strataa_prescriptions(strataa_prescriptions_handle)
 
+tyvac_prescrip_detailed <- read_excel("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.09.21/Copy of TyVAC Antibiotic dataset.xlsx", 
+    col_types = c("text", "numeric", "numeric", 
+        "numeric", "text", "date", "text", 
+        "text", "text", "numeric", "text", 
+        "numeric", "text", "numeric", "text", 
+        "numeric", "text", "numeric", "text", 
+        "numeric", "text", "numeric", "text", 
+        "numeric", "text", "text", "numeric"))
+tyvac_prescrip_detailed$Month <- as.Date(cut(tyvac_prescrip_detailed$`Record Date`, breaks = "month"))
+
 # these data is already tabulated by month
 tyvac_presc_by_month <- read_csv("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.08 cipro prescriptions.csv", col_types = cols(Month = col_date(format = "%d/%m/%Y")))
 tyvac_blood_cultures_by_month <- read_csv("~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.11.12/TyVAC monthly BC.csv", col_types = cols(date = col_date(format = "%Y-%m-%d"))) %>% rename('Month' = 'date', 'tyvac_bc_n' = 'BC collected')
@@ -71,6 +81,8 @@ all_malawian_genomes <- read_excel("/Users/flashton/Dropbox/GordonGroup/STRATAA_
 malawi_and_zim_genomes <- read_excel("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/phylo/results/2021.11.09/malawi_and_zim_clade/prespecified_model_outlier/2021.11.09.MWI_ZIM_clade.with_outlier.annot.xlsx")
 
 malawian_and_context <- read_excel("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/phylo/results/2021.11.09/malawi_and_context/2022.08.30.pefloxcain_typhi_paper_line_list.malawi_and_context_annot.xlsx")
+
+
 
 ```
 
@@ -139,11 +151,29 @@ combined_qrdr_cases_by_month <- combine_by_month(tyvac_qrdr_cases_by_month, stra
 
 # Cipro prescription incidence rates
 
+STRATAA
+
 ```{r}
 strataa_presc_by_month <- strataa_prescriptions %>% group_by(Month) %>% summarise(strataa_prescrip_n = n())
 strataa_presc_by_month$strataa_prescrip_per100000 <- (strataa_presc_by_month$strataa_prescrip_n / strataa_pop) * 100000
 
 combined_prescrip_by_month <- combine_by_month(tyvac_presc_by_month, strataa_presc_by_month, cases_start, cases_end, 'prescrip')
+
+```
+
+TyVAC from detailed
+
+```{r}
+tyvac_prescrip_detailed_cipro <- tyvac_prescrip_detailed %>% filter(`1i. Ciprofloxacin` == 'Yes') %>% select(`residence`, `Record Date`, `1i. Ciprofloxacin`, Month) 
+tyvac_prescrip_detailed_cipro_by_month <- tyvac_prescrip_detailed_cipro %>% group_by(Month, residence) %>% summarise(n = n())
+
+tyvac_prescrip_detailed_cipro_by_month_w <- tyvac_prescrip_detailed_cipro_by_month %>% pivot_wider(values_from = n, names_from = residence)
+tyvac_prescrip_detailed_cipro_by_month_w[is.na(tyvac_prescrip_detailed_cipro_by_month_w)] <- 0 
+
+tyvac_prescrip_detailed_cipro_by_month_w <- tyvac_prescrip_detailed_cipro_by_month_w %>% mutate(total = Zingwangwa + Ndirande + `NA`)
+
+ggplot(tyvac_prescrip_detailed_cipro_by_month, aes(x = Month, y = n, fill = residence)) + geom_bar(stat = "identity")
+
 ```
 
 # Getting the number of blood cultures

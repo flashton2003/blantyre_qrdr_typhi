@@ -11,7 +11,7 @@
 
 <meta name="author" content="Philip Ashton" />
 
-<meta name="date" content="2022-09-16" />
+<meta name="date" content="2022-09-22" />
 
 <title>pefloxacin typhi analysis and figures</title>
 
@@ -589,7 +589,7 @@ pre code {
 
 <h1 class="title toc-ignore">pefloxacin typhi analysis and figures</h1>
 <h4 class="author">Philip Ashton</h4>
-<h4 class="date">2022-09-16</h4>
+<h4 class="date">2022-09-22</h4>
 
 </div>
 
@@ -618,17 +618,18 @@ source(&#39;pefloxacin_typhi_functions.R&#39;)</code></pre>
 </div>
 <div id="read-in-data" class="section level1">
 <h1>Read in data</h1>
-<pre class="r"><code>cases_bc_qrdr_prescrip_handle &lt;- &#39;data/2022.09.14.pef_typhi.cases_bc_qrdr_prescrip.csv&#39;
+<pre class="r"><code>cases_bc_qrdr_prescrip_microconf_handle &lt;- &#39;data/2022.09.14.pef_typhi.cases_bc_qrdr_prescrip_microconf.csv&#39;
 qech_pef_by_month_handle &lt;- &#39;data/2022.09.14.qech_pef_results_per_month.csv&#39; 
 strataa_tyvac_qrdr_typhi_handle &lt;- &#39;data/2022.09.15.strataa_tyvac_qrdr_typhi.one_per_patient.csv&#39;
 tree_summaries_handle &lt;- &#39;data/2022.09.16.tree_summaries.csv&#39;</code></pre>
 <p>Data has been pulled in from various sources and cleaned using
 <code>pefloxacin_typhi_data_cleaning.Rmd</code>. The clean data has been
-saved as data/2022.09.14.pef_typhi.cases_bc_qrdr_prescrip.csv.</p>
-<pre class="r"><code>entire_recruitment_period &lt;- read_csv(cases_bc_qrdr_prescrip_handle)</code></pre>
-<pre><code>## Rows: 38 Columns: 5── Column specification ────────────────────────────────────────────────────────
+saved as
+data/2022.09.14.pef_typhi.cases_bc_qrdr_prescrip_microconf.csv.</p>
+<pre class="r"><code>entire_recruitment_period &lt;- read_csv(cases_bc_qrdr_prescrip_microconf_handle)</code></pre>
+<pre><code>## Rows: 38 Columns: 6── Column specification ────────────────────────────────────────────────────────
 ## Delimiter: &quot;,&quot;
-## dbl  (4): total_typhoid_n, total_prescrip_n, total_qrdr_n, total_bc_n
+## dbl  (5): total_typhoid_n, total_prescrip_n, total_qrdr_n, total_bc_n, micro...
 ## date (1): Month
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
@@ -641,9 +642,11 @@ blood cultures.</p>
 <pre class="r"><code>typh_n &lt;- sum(entire_recruitment_period$total_typhoid_n)
 prescrip_n &lt;- sum(entire_recruitment_period$total_prescrip_n)
 qrdr_n &lt;- sum(entire_recruitment_period$total_qrdr_n)
-bc_n &lt;- sum(entire_recruitment_period$total_bc_n)</code></pre>
+bc_n &lt;- sum(entire_recruitment_period$total_bc_n)
+micro_conf_n &lt;- sum(entire_recruitment_period$micro_confirmed_n)</code></pre>
 <p>In total, over the entire study period there were:</p>
 <ul>
+<li>NA cases of microbiologically confirmed typhoid.</li>
 <li>194 cases of sequencing confirmed typhoid.</li>
 <li>891 prescriptions of cipro</li>
 <li>10 QRDR typhoid (i.e. resistant)</li>
@@ -693,8 +696,217 @@ summary(m)</code></pre>
 ## (Intercept)        297.376  10437.140   0.028    0.977
 ## total_prescrip_n     3.608    128.305   0.028    0.978
 ## total_bc_n          -1.972     67.882  -0.029    0.977</code></pre>
-<pre class="r"><code>#m_summary &lt;- broom.mixed::tidy(m, exponentiate = TRUE, conf.int = TRUE)
-#m_summary  %&gt;% kbl() %&gt;% kable_styling()</code></pre>
+<pre class="r"><code>m_summary &lt;- broom.mixed::tidy(m, exponentiate = TRUE, conf.int = TRUE)
+m_summary  %&gt;% kbl() %&gt;% kable_styling()</code></pre>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+effect
+</th>
+<th style="text-align:left;">
+component
+</th>
+<th style="text-align:left;">
+term
+</th>
+<th style="text-align:right;">
+estimate
+</th>
+<th style="text-align:right;">
+std.error
+</th>
+<th style="text-align:right;">
+statistic
+</th>
+<th style="text-align:right;">
+p.value
+</th>
+<th style="text-align:right;">
+conf.low
+</th>
+<th style="text-align:right;">
+conf.high
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+fixed
+</td>
+<td style="text-align:left;">
+cond
+</td>
+<td style="text-align:left;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+6.835450e-02
+</td>
+<td style="text-align:right;">
+1.856754e-01
+</td>
+<td style="text-align:right;">
+-0.9877367
+</td>
+<td style="text-align:right;">
+0.3232816
+</td>
+<td style="text-align:right;">
+0.0003331
+</td>
+<td style="text-align:right;">
+1.402609e+01
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+fixed
+</td>
+<td style="text-align:left;">
+cond
+</td>
+<td style="text-align:left;">
+total_prescrip_n
+</td>
+<td style="text-align:right;">
+1.150336e+00
+</td>
+<td style="text-align:right;">
+6.072750e-02
+</td>
+<td style="text-align:right;">
+2.6529806
+</td>
+<td style="text-align:right;">
+0.0079784
+</td>
+<td style="text-align:right;">
+1.0372626
+</td>
+<td style="text-align:right;">
+1.275735e+00
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+fixed
+</td>
+<td style="text-align:left;">
+cond
+</td>
+<td style="text-align:left;">
+total_bc_n
+</td>
+<td style="text-align:right;">
+9.804436e-01
+</td>
+<td style="text-align:right;">
+8.672800e-03
+</td>
+<td style="text-align:right;">
+-2.2327115
+</td>
+<td style="text-align:right;">
+0.0255680
+</td>
+<td style="text-align:right;">
+0.9635918
+</td>
+<td style="text-align:right;">
+9.975902e-01
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+fixed
+</td>
+<td style="text-align:left;">
+zi
+</td>
+<td style="text-align:left;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+1.408141e+129
+</td>
+<td style="text-align:right;">
+1.469697e+133
+</td>
+<td style="text-align:right;">
+0.0284921
+</td>
+<td style="text-align:right;">
+0.9772697
+</td>
+<td style="text-align:right;">
+0.0000000
+</td>
+<td style="text-align:right;">
+Inf
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+fixed
+</td>
+<td style="text-align:left;">
+zi
+</td>
+<td style="text-align:left;">
+total_prescrip_n
+</td>
+<td style="text-align:right;">
+3.689442e+01
+</td>
+<td style="text-align:right;">
+4.733748e+03
+</td>
+<td style="text-align:right;">
+0.0281209
+</td>
+<td style="text-align:right;">
+0.9775657
+</td>
+<td style="text-align:right;">
+0.0000000
+</td>
+<td style="text-align:right;">
+6.033811e+110
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+fixed
+</td>
+<td style="text-align:left;">
+zi
+</td>
+<td style="text-align:left;">
+total_bc_n
+</td>
+<td style="text-align:right;">
+1.391918e-01
+</td>
+<td style="text-align:right;">
+9.448581e+00
+</td>
+<td style="text-align:right;">
+-0.0290491
+</td>
+<td style="text-align:right;">
+0.9768254
+</td>
+<td style="text-align:right;">
+0.0000000
+</td>
+<td style="text-align:right;">
+8.407315e+56
+</td>
+</tr>
+</tbody>
+</table>
 <p>Todo:</p>
 <ol style="list-style-type: decimal">
 <li>Need to do the serial autocorrelation analysis</li>

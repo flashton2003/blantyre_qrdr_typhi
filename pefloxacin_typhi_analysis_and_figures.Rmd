@@ -20,17 +20,17 @@ source('pefloxacin_typhi_functions.R')
 # Read in data
 
 ```{r}
-cases_bc_qrdr_prescrip_handle <- 'data/2022.09.14.pef_typhi.cases_bc_qrdr_prescrip.csv'
+cases_bc_qrdr_prescrip_microconf_handle <- 'data/2022.09.14.pef_typhi.cases_bc_qrdr_prescrip_microconf.csv'
 qech_pef_by_month_handle <- 'data/2022.09.14.qech_pef_results_per_month.csv' 
 strataa_tyvac_qrdr_typhi_handle <- 'data/2022.09.15.strataa_tyvac_qrdr_typhi.one_per_patient.csv'
 tree_summaries_handle <- 'data/2022.09.16.tree_summaries.csv'
 ```
 
-Data has been pulled in from various sources and cleaned using `pefloxacin_typhi_data_cleaning.Rmd`. The clean data has been saved as `r cases_bc_qrdr_prescrip_handle`.
+Data has been pulled in from various sources and cleaned using `pefloxacin_typhi_data_cleaning.Rmd`. The clean data has been saved as `r cases_bc_qrdr_prescrip_microconf_handle`.
 
 ```{r}
 
-entire_recruitment_period <- read_csv(cases_bc_qrdr_prescrip_handle)
+entire_recruitment_period <- read_csv(cases_bc_qrdr_prescrip_microconf_handle)
 ```
 
 # STRATAA/TyVAC data summary
@@ -42,11 +42,13 @@ typh_n <- sum(entire_recruitment_period$total_typhoid_n)
 prescrip_n <- sum(entire_recruitment_period$total_prescrip_n)
 qrdr_n <- sum(entire_recruitment_period$total_qrdr_n)
 bc_n <- sum(entire_recruitment_period$total_bc_n)
+micro_conf_n <- sum(entire_recruitment_period$micro_confirmed_n)
 ```
 
 
 In total, over the entire study period there were:
 
+* `r micro_conf_n` cases of microbiologically confirmed typhoid.
 * `r typh_n` cases of sequencing confirmed typhoid.
 * `r prescrip_n` prescriptions of cipro
 * `r qrdr_n` QRDR typhoid (i.e. resistant)
@@ -65,8 +67,8 @@ Questions:
 ```{r}
 m <- glmmTMB(total_qrdr_n ~ total_prescrip_n + total_bc_n + offset(total_typhoid_n),  data = entire_recruitment_period, family = "nbinom2", ziformula = ~.)
 summary(m)
-#m_summary <- broom.mixed::tidy(m, exponentiate = TRUE, conf.int = TRUE)
-#m_summary  %>% kbl() %>% kable_styling()
+m_summary <- broom.mixed::tidy(m, exponentiate = TRUE, conf.int = TRUE)
+m_summary  %>% kbl() %>% kable_styling()
 ```
 
 Todo:
