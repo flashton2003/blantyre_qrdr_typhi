@@ -38,7 +38,8 @@ entire_recruitment_period <- read_csv(cases_bc_qrdr_prescrip_microconf_handle)
 The number of sequencing confirmed typhoid cases and number of qrdr (sequencing confirmed), number of prescriptions of cipro, number of blood cultures, and number of microbiologically confirmed typhoid.
 
 ```{r}
-typh_n <- sum(entire_recruitment_period$total_typhoid_n)
+typhoid_n <- sum(entire_recruitment_period$total_seq_typhoid_n)
+typhi_n <- sum(entire_recruitment_period$total_seq_typhi_n)
 prescrip_n <- sum(entire_recruitment_period$total_prescrip_n)
 qrdr_n <- sum(entire_recruitment_period$total_qrdr_n)
 bc_n <- sum(entire_recruitment_period$total_bc_n)
@@ -51,7 +52,8 @@ In total, over the entire study period there were:
 
 * `r micro_conf_opp_n` cases of microbiologically confirmed typhoid (one per patient).
 * `r micro_conf_all_n` isolates S. Typhi.
-* `r typh_n` cases of sequencing confirmed typhoid.
+* `r typhoid_n` cases of sequencing confirmed typhoid 
+* `r typhi_n` cases of sequencing confirmed typhi (multiple isolates per patient in some cases)
 * `r prescrip_n` prescriptions of cipro
 * `r qrdr_n` QRDR typhoid (i.e. resistant)
 * `r format(bc_n, scientific=FALSE)` blood cultures
@@ -67,7 +69,7 @@ Peter code here
 
 ```{r glm model}
 
-m <- glm(cbind(total_qrdr_n, total_typhoid_n-total_qrdr_n) ~ total_prescrip_n + total_bc_n,  
+m <- glm(cbind(total_qrdr_n, total_seq_typhoid_n-total_qrdr_n) ~ total_prescrip_n + total_bc_n,  
          data = entire_recruitment_period, 
          family = "binomial")
 
@@ -84,7 +86,7 @@ preds <- augment(m, newdata = entire_recruitment_period, se_fit = TRUE) %>%
 preds %>%
   ggplot(aes(y=.fitted, ymin=.lower, ymax=.upper, x=Month)) +
   geom_pointrange(alpha=0.5) +
-  geom_point(aes(x=Month, y=total_qrdr_n/total_typhoid_n), colour="firebrick", alpha=0.5, shape=4) +
+  geom_point(aes(x=Month, y=total_qrdr_n/total_seq_typhoid_n), colour="firebrick", alpha=0.5, shape=4) +
   scale_y_continuous(labels = scales::percent, limits = c(0,1)) +
   scale_x_date() +
   labs(y="Predicted % of typhoid cases with drug resistance\n(95% CI)")
@@ -98,7 +100,7 @@ library(brms)
 library(tidybayes)
 
 #with a binomial distribution
-m2 <- brm(bf(total_qrdr_n | trials(total_typhoid_n) ~ total_prescrip_n + total_bc_n),
+m2 <- brm(bf(total_qrdr_n | trials(total_seq_typhoid_n) ~ total_prescrip_n + total_bc_n),
           data = entire_recruitment_period, 
           family = binomial(),
           chains = 4)
@@ -115,9 +117,9 @@ preds2 <- entire_recruitment_period %>%
 preds2
 
 preds2 %>%
-  mutate(.epred_prev = .epred/total_typhoid_n,
-         .lower_prev = .lower/total_typhoid_n,
-         .upper_prev = .upper/total_typhoid_n) %>%
+  mutate(.epred_prev = .epred/total_seq_typhoid_n,
+         .lower_prev = .lower/total_seq_typhoid_n,
+         .upper_prev = .upper/total_seq_typhoid_n) %>%
   ggplot(aes(x=Month, y =.epred_prev, ymin=.lower_prev, ymax=.upper_prev)) +
   geom_pointrange() +
   scale_y_continuous(labels = scales::percent, limits = c(0,1))

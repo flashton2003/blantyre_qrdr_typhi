@@ -74,6 +74,7 @@ combine_cases_prescrip_qrdr_bc_mc <- function(combined_qrdr_cases_by_month, sequ
   
   entire_recruitment_period <- data.frame(Month = seq(cases_start, cases_end, "months"))
   entire_recruitment_period <- left_join(entire_recruitment_period, cases_per_month, by = 'Month')
+  entire_recruitment_period <- left_join(entire_recruitment_period, sequenced_isolates_by_month, by = 'Month')
   entire_recruitment_period <- left_join(entire_recruitment_period, prescriptions_per_month, by = 'Month')
   entire_recruitment_period <- left_join(entire_recruitment_period, qrdr_per_month, by = 'Month')
   entire_recruitment_period <- left_join(entire_recruitment_period, bc_per_month, by = 'Month')
@@ -108,7 +109,7 @@ plot_typh_presc_qrdr_bc_per100000 <- function(input_data) {
 }
 
 plot_typh_presc_qrdr_bc_n <- function(input_data) {
-  typhoid_graph <- ggplot(input_data, aes(x = Month, y = total_typhoid_n)) + 
+  typhoid_graph <- ggplot(input_data, aes(x = Month, y = total_seq_typhoid_n)) + 
     geom_bar(stat = "identity") + 
     ylab('# Sequencing confirmed typhoid')
   
