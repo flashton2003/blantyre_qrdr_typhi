@@ -223,3 +223,12 @@ Table of the number of genomes included from each location in each tree.
 
 `r all_tree_summaries %>% kbl() %>% kable_styling()`
 
+
+# Supplmentary Figure 1 - Plot number of sequenced and unsequenced typhi cases
+
+```{r}
+seq_unseq_cases <- entire_recruitment_period %>% select(Month, total_seq_typhoid_n, micro_confirmed_opp_n) %>% mutate(unsequenced = micro_confirmed_opp_n - total_seq_typhoid_n)
+seq_unseq_cases_l <- seq_unseq_cases %>% select(Month, total_seq_typhoid_n, unsequenced) %>% pivot_longer(!Month, names_to = "type", values_to = "Number")
+ggplot(seq_unseq_cases_l, aes(x = Month, y = Number, fill = type)) +
+  geom_bar(stat = "identity")
+```
