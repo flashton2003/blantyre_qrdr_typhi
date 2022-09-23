@@ -93,7 +93,7 @@ preds %>%
 
 Just check with a bayesian model.
 
-```{r bayesian model}
+```{r bayesian model, eval=FALSE}
 library(brms)
 library(tidybayes)
 

@@ -1,4 +1,4 @@
-Month,total_typhoid_n,total_prescrip_n,total_qrdr_n,total_bc_n,micro_confirmed_opp_n,micro_confirmed_all_n
+Month,total_seq_typhoid_n,total_prescrip_n,total_qrdr_n,total_bc_n,micro_confirmed_opp_n,micro_confirmed_all_n
 2016-10-01,2,7,0,76,4,4
 2016-11-01,5,15,0,89,6,6
 2016-12-01,15,24,0,72,15,15

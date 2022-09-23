@@ -46,8 +46,8 @@ combine_by_month <- function(tyvac_by_month, strataa_by_month, cases_start, case
     combined_by_month$total_qrdr_incidence_per_100000 <- (combined_by_month$total_qrdr_n / strataa_pop) * 100000
   }
   else if (input_type == 'cases'){
-    combined_by_month$total_typhoid_n <- combined_by_month$tyvac_n + combined_by_month$strataa_n
-    combined_by_month$total_typhoid_per100000 <- (combined_by_month$total_typhoid_n / strataa_pop) * 100000
+    combined_by_month$total_seq_typhoid_n <- combined_by_month$tyvac_n + combined_by_month$strataa_n
+    combined_by_month$total_typhoid_per100000 <- (combined_by_month$total_seq_typhoid_n / strataa_pop) * 100000
   }
   else if(input_type == 'prescrip'){
     combined_by_month$total_prescrip_n <- combined_by_month$tyvac_eligible_ciprofloxacin_prescribed + combined_by_month$strataa_prescrip_n
@@ -63,9 +63,10 @@ combine_by_month <- function(tyvac_by_month, strataa_by_month, cases_start, case
   return(combined_by_month)
 }
 
-combine_cases_prescrip_qrdr_bc_mc <- function(combined_qrdr_cases_by_month, combined_cases_by_month, combined_prescrip_by_month, combined_blood_cultures_by_month, micro_confirmed_opp_by_month, micro_confirmed_all_by_month, cases_start, cases_end){
+combine_cases_prescrip_qrdr_bc_mc <- function(combined_qrdr_cases_by_month, sequenced_cases_by_month, sequenced_isolates_by_month, combined_prescrip_by_month, combined_blood_cultures_by_month, micro_confirmed_opp_by_month, micro_confirmed_all_by_month, cases_start, cases_end){
   qrdr_per_month <- select(combined_qrdr_cases_by_month, c('Month', 'total_qrdr_n'))
-  cases_per_month <- select(combined_cases_by_month, c('Month', 'total_typhoid_n'))
+  cases_per_month <- select(sequenced_cases_by_month, c('Month', 'total_seq_typhoid_n'))
+  sequenced_isolates_by_month <- select(sequenced_isolates_by_month, c('Month', 'total_seq_typhi_n'))
   prescriptions_per_month <- select(combined_prescrip_by_month, c('Month', 'total_prescrip_n'))
   bc_per_month <- select(combined_blood_cultures_by_month, c('Month', 'total_bc_n'))
   mc_opp_per_month <- select(micro_confirmed_opp_by_month, c('Month', 'micro_confirmed_opp_n'))

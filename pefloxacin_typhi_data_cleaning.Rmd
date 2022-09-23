@@ -107,25 +107,26 @@ micro_confirmed_all <- get_strataa_tyvac_cases(all_typhi, cases_start, cases_end
 micro_confirmed_all_by_month <- micro_confirmed_all %>% group_by(Month) %>% summarise(micro_confirmed_all_n = n())
 ```
 
-# Sequencing confirmed typhoid incidence rate
+# Sequencing confirmed typhoid
 
 Here we filter the input line list to extract the *sequenced* tyvac samples from ndirande and the sequenced strataa samples.
 
 ```{r}
 
-sequencing_confirmed_typhi <- one_typhi_per_patient %>% filter(!is.na(`Sequenced?`) & `overall sequencing identification` == "Typhi")
+sequencing_confirmed_typhi_opp <-  micro_confirmed_opp %>% filter(!is.na(`Sequenced?`) & `overall sequencing identification` == "Typhi")
+sequencing_confirmed_typhi_all <- micro_confirmed_all %>% filter(!is.na(`Sequenced?`) & `overall sequencing identification` == "Typhi")
 
 #tyvac_cases <- sequencing_confirmed_typhi %>% filter(Study == 'TyVAC' & `TyVAC site` == 'Ndirande')
-tyvac_cases <- sequencing_confirmed_typhi %>% filter(Study == 'TyVAC')
+tyvac_cases <- sequencing_confirmed_typhi_opp %>% filter(Study == 'TyVAC')
 tyvac_cases_by_month <- tyvac_cases %>% group_by(Month) %>% summarise(tyvac_n = n())
 
 # we use grepl to find "strataa adjacent" samples as well as strataa samples.
-strataa_cases <- sequencing_confirmed_typhi %>% filter(grepl('STRATAA', Study))
+strataa_cases <- sequencing_confirmed_typhi_opp %>% filter(grepl('STRATAA', Study))
 strataa_cases_by_month <- strataa_cases  %>% group_by(Month) %>% summarise(strataa_n = n())
 strataa_cases_by_month$strataa_typhoid_per100000 <- (strataa_cases_by_month$strataa_n / strataa_pop) * 100000
 
-combined_cases_by_month <- combine_by_month(tyvac_cases_by_month, strataa_cases_by_month, cases_start, cases_end, 'cases')
-
+sequenced_cases_by_month <- combine_by_month(tyvac_cases_by_month, strataa_cases_by_month, cases_start, cases_end, 'cases')
+sequenced_isolates_by_month <- sequencing_confirmed_typhi_all %>% group_by(Month) %>% summarise(total_seq_typhi_n = n())
 ```
 
 # QRDR Typhi incidence
@@ -187,7 +188,7 @@ combined_blood_cultures_by_month <- combine_by_month(tyvac_blood_cultures_by_mon
 
 ```{r}
 
-entire_study_period <- combine_cases_prescrip_qrdr_bc_mc(combined_qrdr_cases_by_month, combined_cases_by_month, combined_prescrip_by_month, combined_blood_cultures_by_month, micro_confirmed_opp_by_month, micro_confirmed_all_by_month, cases_start, cases_end)
+entire_study_period <- combine_cases_prescrip_qrdr_bc_mc(combined_qrdr_cases_by_month, sequenced_cases_by_month, sequenced_isolates_by_month, combined_prescrip_by_month, combined_blood_cultures_by_month, micro_confirmed_opp_by_month, micro_confirmed_all_by_month, cases_start, cases_end)
 
 entire_study_period[is.na(entire_study_period)] <- 0 
 
@@ -204,7 +205,7 @@ Filter to get only samples that have a QRDR mutation, that were either in tyvac-
 
 ```{r}
 #strataa_tyvac_qrdr_typhi <- sequencing_confirmed_typhi %>% filter(!is.na(QRDR)) %>% filter((Study == 'TyVAC' & `TyVAC site` == 'Ndirande') | grepl('STRATAA', Study)) %>% arrange(`Properly formatted date`)
-strataa_tyvac_qrdr_typhi <- sequencing_confirmed_typhi %>% filter(!is.na(QRDR)) %>% filter(Study == 'TyVAC' | grepl('STRATAA', Study)) %>% arrange(`Properly formatted date`)
+strataa_tyvac_qrdr_typhi <- sequencing_confirmed_typhi_opp %>% filter(!is.na(QRDR)) %>% filter(Study == 'TyVAC' | grepl('STRATAA', Study)) %>% arrange(`Properly formatted date`)
 
 write_csv(strataa_tyvac_qrdr_typhi, 'data/2022.09.15.strataa_tyvac_qrdr_typhi.one_per_patient.csv')
 
