@@ -116,7 +116,8 @@ Here we filter the input line list to extract the *sequenced* tyvac samples from
 sequencing_confirmed_typhi_opp <-  micro_confirmed_opp %>% filter(!is.na(`Sequenced?`) & `overall sequencing identification` == "Typhi")
 sequencing_confirmed_typhi_all <- micro_confirmed_all %>% filter(!is.na(`Sequenced?`) & `overall sequencing identification` == "Typhi")
 
-#tyvac_cases <- sequencing_confirmed_typhi %>% filter(Study == 'TyVAC' & `TyVAC site` == 'Ndirande')
+# can use == 'TyVAC' because the STRATAA/TyVAC ones will be caught in the STRATAA select
+# all the genomes that were in both STRTAAA and tyvac are being counted as part of strataa
 tyvac_cases <- sequencing_confirmed_typhi_opp %>% filter(Study == 'TyVAC')
 tyvac_cases_by_month <- tyvac_cases %>% group_by(Month) %>% summarise(tyvac_n = n())
 
