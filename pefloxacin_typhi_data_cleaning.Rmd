@@ -125,8 +125,10 @@ strataa_cases <- sequencing_confirmed_typhi %>% filter(grepl('STRATAA', Study))
 strataa_cases_by_month <- strataa_cases  %>% group_by(Month) %>% summarise(strataa_n = n())
 strataa_cases_by_month$strataa_typhoid_per100000 <- (strataa_cases_by_month$strataa_n / strataa_pop) * 100000
 
-cases_start <- min(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
-cases_end <- max(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
+#cases_start <- min(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
+#cases_end <- max(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
+
+cases_start <-
 
 combined_cases_by_month <- combine_by_month(tyvac_cases_by_month, strataa_cases_by_month, cases_start, cases_end, 'cases')
 
