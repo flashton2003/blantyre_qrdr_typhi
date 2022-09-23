@@ -121,11 +121,16 @@ plot_typh_presc_qrdr_bc_n <- function(input_data) {
     geom_bar(stat = "identity") +
     ylab('# S. Typhi with QRDR mutations')
   
+  qrdr_proportion_typhoid_graph <-ggplot(input_data, aes(x = Month, y = total_qrdr_n / total_seq_typhoid_n)) +
+    geom_point(colour="firebrick", shape=4) +
+    scale_y_continuous(labels = scales::percent) +
+    ylab('% of Typhi that were QRDR')
+  
   bc_graph <- ggplot(input_data, aes(x = Month, y = total_bc_n)) + 
     geom_bar(stat = "identity") +
     ylab('# blood cultures')
   
-  p <- typhoid_graph / cipro_prescrip_graph / qrdr_graph / bc_graph + plot_layout(heights = c(5,5,5,5))
+  p <- typhoid_graph / cipro_prescrip_graph / qrdr_graph / qrdr_proportion_typhoid_graph / bc_graph + plot_layout(heights = c(5,5,5,5,5))
   
   return(p)
   

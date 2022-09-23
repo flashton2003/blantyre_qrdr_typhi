@@ -66,6 +66,7 @@ After discussion with Marc, want to do one model with all the data from the enti
 
 Peter code here
 
+Question - should we be using `total_seq_typhoid_n-total_qrdr_n` or just `total_seq_typhoid_n`?
 
 ```{r glm model}
 
@@ -178,11 +179,8 @@ There were `r total_qech_typhi_tested` total qech typhi tested, and `r total_qec
 Graphs of the counts of typhi cases, qrdr cases, cipro prescriptions and blood cultures from the entire strataa/tyvac recruitment period.
 
 ```{r, fig.width = 6, fig.height = 12}
-
-
 entire_period_tpqb_graph <- plot_typh_presc_qrdr_bc_n(entire_recruitment_period) # tpqb stands for typhoid, prescriptions, qrdr and blood cultures
 entire_period_tpqb_graph + plot_annotation('Combined STRATAA & TyVAC period')
-
 ```
 
 ### Numbers for Figure 2
@@ -194,6 +192,12 @@ qrdr_sept_oct2019 <- strataa_tyvac_qrdr_typhi %>% filter(`Properly formatted dat
 
 mutations_before_sept2019 <- qrdr_before_sept019 %>% group_by(QRDR) %>% summarise(n = n())
 mutations_sept_oct2019 <- qrdr_sept_oct2019 %>% group_by(QRDR) %>% summarise(n = n())
+
+#before_sept19 <- entire_recruitment_period %>% filter(`Month` < '2019-09-01')
+#after_sept19 <- entire_recruitment_period %>% filter(`Month` >= '2019-09-01')
+
+before_after_sept19 <- entire_recruitment_period %>% mutate(before_after_sept19 = ifelse(Month < '2019-09-01', 'before_sept19', 'after_sept19')) %>% group_by(before_after_sept19, ) %>% summarise(total_seq_typhoid_n = sum(total_seq_typhoid_n), total_qrdr_n = sum(total_qrdr_n)) %>% mutate(pct_qrdr = (total_qrdr_n / total_seq_typhoid_n) * 100)
+before_after_sept19 %>% kbl() %>% kable_styling()
 
 ```
 
@@ -208,7 +212,6 @@ Sept-Oct 2019
 
 
 # Summaries of the numbers in each phylo
-
 
 ```{r}
 all_tree_summaries <- read_csv(tree_summaries_handle)
@@ -232,3 +235,9 @@ seq_unseq_cases_l <- seq_unseq_cases %>% select(Month, total_seq_typhoid_n, unse
 ggplot(seq_unseq_cases_l, aes(x = Month, y = Number, fill = type)) +
   geom_bar(stat = "identity")
 ```
+
+
+
+
+
+
