@@ -47,11 +47,6 @@ strataa_pop <- 102242 #
 
 Here we import all the files needed for this analysis.
 
-Todo:
-
-* make sure excluding multiple isolates from the same person (get PIDs for both STRATAA and TyVAC)
-* get the definitive line list of all typhis from STRATAA
-
 ```{r ImportData, warning=FALSE}
 
 one_typhi_per_patient <- get_one_typhi_per_patient(line_list_handle)

@@ -26,7 +26,7 @@ strataa_tyvac_qrdr_typhi_handle <- 'data/2022.09.15.strataa_tyvac_qrdr_typhi.one
 tree_summaries_handle <- 'data/2022.09.16.tree_summaries.csv'
 ```
 
-Data has been pulled in from various sources and cleaned using `pefloxacin_typhi_data_cleaning.Rmd`. The clean data has been saved as `r cases_bc_qrdr_prescrip_microconf_handle`.
+Data has been pulled in from various sources and cleaned using `pefloxacin_typhi_data_cleaning.Rmd`. The clean data has been saved as `r data/cases_bc_qrdr_prescrip_microconf_handle`.
 
 ```{r}
 
@@ -35,7 +35,7 @@ entire_recruitment_period <- read_csv(cases_bc_qrdr_prescrip_microconf_handle)
 
 # STRATAA/TyVAC data summary
 
-The number of sequencing confirmed typhoid cases and number of qrdr (sequencing confirmed), number of prescriptions of cipro, and number of blood cultures.
+The number of sequencing confirmed typhoid cases and number of qrdr (sequencing confirmed), number of prescriptions of cipro, number of blood cultures, and number of microbiologically confirmed typhoid.
 
 ```{r}
 typh_n <- sum(entire_recruitment_period$total_typhoid_n)
@@ -58,11 +58,6 @@ In total, over the entire study period there were:
 # Investigating associations
 
 After discussion with Marc, want to do one model with all the data from the entire study period. It doesn't matter about the difference in recruitment criteria between strataa and tyvac because the important thing is the number of qrdr typhi per typhoid case, and the method of detecting those was consistent.
-
-Questions:
-
-* How to handle the number of prescriptions and the number of blood cultures between TyVAC and STRATAA? The denominator is not the same here so how to combine?
-* `ziformula = ~.` produces a warning about `Model convergence problem; non-positive-definite Hessian matrix.`, and the results are generally `NaN`.
 
 
 Peter code here
