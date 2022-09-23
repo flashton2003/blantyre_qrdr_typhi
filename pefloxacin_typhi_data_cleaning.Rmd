@@ -21,6 +21,7 @@ In this document we are analysing Salmonella Typhi from the STRATAA and TyVAC st
 ```{r message=FALSE}
 library(tidyverse)
 library(readxl)
+library(kableExtra)
 #library(lubridate)
 #library(here)
 #library(tsibble)
@@ -35,8 +36,10 @@ source('pefloxacin_typhi_functions.R')
 `tyvac_pop` is the ndirande intention to treat population (or should we use the per protocol number?). `strataa_pop` is the population size at the final census (aug 2018-April 2019). `tyvac_strataa_start` and `tyvac_strataa_end` are the start and finish of the period of overlap between strataa and tyvac.
 
 ```{r KeyVariables}
-tyvac_pop <- 17695 # 
+tyvac_pop <- 17695 # this needs to be updated before it can be used, as is only Ndirande.
 strataa_pop <- 102242 # 
+cases_start <- as.Date('2016-10-01')
+cases_end <- as.Date('2019-10-31')
 #tyvac_strataa_start <- as.Date('2018-05-01')
 #tyvac_strataa_end <- as.Date('2019-10-01')
 #strataa_start <- as.Date('2016-11-01')
@@ -49,7 +52,9 @@ Here we import all the files needed for this analysis.
 
 ```{r ImportData, warning=FALSE}
 
-one_typhi_per_patient <- get_one_typhi_per_patient(line_list_handle)
+typhis <- get_typhi_data(line_list_handle)
+one_typhi_per_patient <- typhis$one_typhi_per_patient
+all_typhi <- typhis$all_typhi
 
 strataa_prescriptions_handle <- "/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2021.04.08/2021.04.01 strataa_ndirande_prescribed from James Meiring.csv"
 strataa_prescriptions <- read_strataa_prescriptions(strataa_prescriptions_handle)
@@ -84,9 +89,6 @@ malawian_and_context <- read_excel("/Users/flashton/Dropbox/GordonGroup/STRATAA_
 # QECH pef testing results
 
 ```{r}
-
-one_typhi_per_patient <- get_one_typhi_per_patient(line_list_handle)
-
 qech_pef_tested_typhi <- one_typhi_per_patient %>% filter(grepl('QECH', Study)) %>% filter(!is.na(`Cipro MIC res?`))
 qech_pef_by_month <- qech_pef_tested_typhi %>% group_by(Month, `Cipro MIC res?`) %>% summarise(n = n())
 qech_pef_by_month <- qech_pef_by_month %>% filter(Month >= "2019-01-01")
@@ -97,15 +99,17 @@ write_csv(qech_pef_by_month, 'data/2022.09.14.qech_pef_results_per_month.csv')
 # Calculate the total number of microbiologically confirmed typhi in STRATAA/TyVAC
 
 ```{r}
-
-micro_confirmed <- one_typhi_per_patient %>% filter(grepl('STRATAA', Study) | grepl('TyVAC', Study)) %>% filter(Organism == 'Salmonella Typhi') %>% filter(`Properly formatted date` >= '2016-10-01' & `Properly formatted date` <= '2019-10-31')
-micro_confirmed_by_month <- micro_confirmed %>% group_by(Month) %>% summarise(micro_confirmed_n = n())
-
+# opp is one per patient
+micro_confirmed_opp <- get_strataa_tyvac_cases(one_typhi_per_patient, cases_start, cases_end) 
+micro_confirmed_opp_by_month <- micro_confirmed_opp %>% group_by(Month) %>% summarise(micro_confirmed_opp_n = n())
+# all includes mutliple samples from single patients
+micro_confirmed_all <- get_strataa_tyvac_cases(all_typhi, cases_start, cases_end)
+micro_confirmed_all_by_month <- micro_confirmed_all %>% group_by(Month) %>% summarise(micro_confirmed_all_n = n())
 ```
 
 # Sequencing confirmed typhoid incidence rate
 
-Here we filter the input line list to extract the *sequenced* tyvac samples from ndirande and the sequenced strataa samples. `cases_start` and `cases_end` are defined here.
+Here we filter the input line list to extract the *sequenced* tyvac samples from ndirande and the sequenced strataa samples.
 
 ```{r}
 
@@ -119,11 +123,6 @@ tyvac_cases_by_month <- tyvac_cases %>% group_by(Month) %>% summarise(tyvac_n = 
 strataa_cases <- sequencing_confirmed_typhi %>% filter(grepl('STRATAA', Study))
 strataa_cases_by_month <- strataa_cases  %>% group_by(Month) %>% summarise(strataa_n = n())
 strataa_cases_by_month$strataa_typhoid_per100000 <- (strataa_cases_by_month$strataa_n / strataa_pop) * 100000
-
-#cases_start <- min(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
-#cases_end <- max(strataa_cases_by_month$Month, tyvac_cases_by_month$Month)
-
-cases_start <-
 
 combined_cases_by_month <- combine_by_month(tyvac_cases_by_month, strataa_cases_by_month, cases_start, cases_end, 'cases')
 
@@ -188,7 +187,13 @@ combined_blood_cultures_by_month <- combine_by_month(tyvac_blood_cultures_by_mon
 
 ```{r}
 
-entire_study_period <- combine_cases_prescrip_qrdr_bc_mc(combined_qrdr_cases_by_month, combined_cases_by_month, combined_prescrip_by_month, combined_blood_cultures_by_month, micro_confirmed_by_month, cases_start, cases_end)
+entire_study_period <- combine_cases_prescrip_qrdr_bc_mc(combined_qrdr_cases_by_month, combined_cases_by_month, combined_prescrip_by_month, combined_blood_cultures_by_month, micro_confirmed_opp_by_month, micro_confirmed_all_by_month, cases_start, cases_end)
+
+entire_study_period[is.na(entire_study_period)] <- 0 
+
+entire_study_period  %>% kbl() %>% kable_styling()
+
+
 write_csv(entire_study_period, 'data/2022.09.14.pef_typhi.cases_bc_qrdr_prescrip_microconf.csv')
 ```
 

@@ -2,21 +2,27 @@
 
 line_list_handle <- "~/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/data_munging/2022.09.08/2022.09.08 line list.xlsx"
 
-get_one_typhi_per_patient <- function(line_list_handle){
+get_typhi_data <- function(line_list_handle){
   all_typhi <- read_excel(line_list_handle, col_types = c("text", "text", "text", "text",
                                                           "text", "date", "text", "text", "numeric", 
                                                           "text", "text", "text", "text", "text", 
                                                           "text", "text", "text", "numeric", 
                                                           "text", "text", "text", "text", "text", 
                                                           "text", "text", "text", "text", "text", "text"))
-  
-  all_typhi$Month <- as.Date(cut(all_typhi$`Properly formatted date`, breaks = "month"))
-  # Note starts with "Ignore" if there is some reason the sample should be ignored
-  all_typhi <- all_typhi %>% mutate(any_qrdr = ifelse(is.na(QRDR), NA, "QRDR")) %>% filter(!grepl("^Ignore", Note))
+  # current line list includes one sample that isn't a valid id
+  all_typhi <- all_typhi %>% filter(!grepl("^Ignore - mixup", Note))
   all_typhi$`Properly formatted date`<- as.Date(all_typhi$`Properly formatted date`)
-  return(all_typhi)
+  all_typhi$Month <- as.Date(cut(all_typhi$`Properly formatted date`, breaks = "month"))
+  
+  # Note starts with "Ignore" if there is some reason the sample should be ignored
+  one_typhi_per_patient <- all_typhi %>% mutate(any_qrdr = ifelse(is.na(QRDR), NA, "QRDR")) %>% filter(!grepl("^Ignore - duplicate", Note))
+  typhis <- list("all_typhi" = all_typhi, "one_typhi_per_patient" = one_typhi_per_patient)
+  return(typhis)
 }
 
+get_strataa_tyvac_cases <- function(df, cases_start, cases_end){
+  df %>% filter(grepl('STRATAA', Study) | grepl('TyVAC', Study)) %>% filter(Organism == 'Salmonella Typhi') %>% filter(`Properly formatted date` >= cases_start & `Properly formatted date` <= cases_end)
+}
 
 read_strataa_prescriptions <- function(strataa_prescriptions_handle){
   # ps12_dov is the date of visit
@@ -57,18 +63,22 @@ combine_by_month <- function(tyvac_by_month, strataa_by_month, cases_start, case
   return(combined_by_month)
 }
 
-combine_cases_prescrip_qrdr_bc_mc <- function(combined_qrdr_cases_by_month, combined_cases_by_month, combined_prescrip_by_month, combined_blood_cultures_by_month, micro_confirmed_by_month, cases_start, cases_end){
+combine_cases_prescrip_qrdr_bc_mc <- function(combined_qrdr_cases_by_month, combined_cases_by_month, combined_prescrip_by_month, combined_blood_cultures_by_month, micro_confirmed_opp_by_month, micro_confirmed_all_by_month, cases_start, cases_end){
   qrdr_per_month <- select(combined_qrdr_cases_by_month, c('Month', 'total_qrdr_n'))
   cases_per_month <- select(combined_cases_by_month, c('Month', 'total_typhoid_n'))
   prescriptions_per_month <- select(combined_prescrip_by_month, c('Month', 'total_prescrip_n'))
   bc_per_month <- select(combined_blood_cultures_by_month, c('Month', 'total_bc_n'))
+  mc_opp_per_month <- select(micro_confirmed_opp_by_month, c('Month', 'micro_confirmed_opp_n'))
+  mc_all_per_month <- select(micro_confirmed_all_by_month, c('Month', 'micro_confirmed_all_n'))
   
   entire_recruitment_period <- data.frame(Month = seq(cases_start, cases_end, "months"))
   entire_recruitment_period <- left_join(entire_recruitment_period, cases_per_month, by = 'Month')
   entire_recruitment_period <- left_join(entire_recruitment_period, prescriptions_per_month, by = 'Month')
   entire_recruitment_period <- left_join(entire_recruitment_period, qrdr_per_month, by = 'Month')
   entire_recruitment_period <- left_join(entire_recruitment_period, bc_per_month, by = 'Month')
-  entire_recruitment_period <- left_join(entire_recruitment_period, micro_confirmed_by_month, by = 'Month')
+  entire_recruitment_period <- left_join(entire_recruitment_period, mc_opp_per_month, by = 'Month')
+  entire_recruitment_period <- left_join(entire_recruitment_period, mc_all_per_month, by = 'Month')
+  
   return(entire_recruitment_period)
 }
 
