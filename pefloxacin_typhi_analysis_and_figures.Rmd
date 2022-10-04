@@ -78,6 +78,18 @@ summary(m)
 m_summary <- broom.mixed::tidy(m, exponentiate = TRUE, conf.int = TRUE)
 m_summary  %>% kbl() %>% kable_styling()
 
+entire_recruitment_period <- entire_recruitment_period %>% mutate(total_non_qrdr_typhi = total_seq_typhoid_n-total_qrdr_n)
+
+x <- cbind(entire_recruitment_period$total_qrdr_n, entire_recruitment_period$total_seq_typhoid_n-entire_recruitment_period$total_qrdr_n)
+
+m1 <- glm(cbind(total_qrdr_n, total_seq_typhoid_n-total_qrdr_n) ~ lag(total_prescrip_n) + total_bc_n,  
+         data = entire_recruitment_period, 
+         family = "binomial")
+
+summary(m1)
+m1_summary <- broom.mixed::tidy(m1, exponentiate = TRUE, conf.int = TRUE)
+m1_summary  %>% kbl() %>% kable_styling()
+
 preds <- augment(m, newdata = entire_recruitment_period, se_fit = TRUE) %>%
   mutate(.lower=.fitted-1.96*.se.fit, 
          .upper=.fitted+1.96*.se.fit) %>%

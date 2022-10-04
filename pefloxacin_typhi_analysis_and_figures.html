@@ -11,7 +11,7 @@
 
 <meta name="author" content="Philip Ashton" />
 
-<meta name="date" content="2022-09-23" />
+<meta name="date" content="2022-10-04" />
 
 <title>pefloxacin typhi analysis and figures</title>
 
@@ -589,7 +589,7 @@ pre code {
 
 <h1 class="title toc-ignore">pefloxacin typhi analysis and figures</h1>
 <h4 class="author">Philip Ashton</h4>
-<h4 class="date">2022-09-23</h4>
+<h4 class="date">2022-10-04</h4>
 
 </div>
 
@@ -666,6 +666,9 @@ recruitment criteria between strataa and tyvac because the important
 thing is the number of qrdr typhi per typhoid case, and the method of
 detecting those was consistent.</p>
 <p>Peter code here</p>
+<p>Question - should we be using
+<code>total_seq_typhoid_n-total_qrdr_n</code> or just
+<code>total_seq_typhoid_n</code>?</p>
 <pre class="r"><code>m &lt;- glm(cbind(total_qrdr_n, total_seq_typhoid_n-total_qrdr_n) ~ total_prescrip_n + total_bc_n,  
          data = entire_recruitment_period, 
          family = &quot;binomial&quot;)
@@ -795,6 +798,141 @@ total_bc_n
 </tr>
 </tbody>
 </table>
+<pre class="r"><code>entire_recruitment_period &lt;- entire_recruitment_period %&gt;% mutate(total_non_qrdr_typhi = total_seq_typhoid_n-total_qrdr_n)
+
+x &lt;- cbind(entire_recruitment_period$total_qrdr_n, entire_recruitment_period$total_seq_typhoid_n-entire_recruitment_period$total_qrdr_n)
+
+m1 &lt;- glm(cbind(total_qrdr_n, total_seq_typhoid_n-total_qrdr_n) ~ lag(total_prescrip_n) + total_bc_n,  
+         data = entire_recruitment_period, 
+         family = &quot;binomial&quot;)
+
+summary(m1)</code></pre>
+<pre><code>## 
+## Call:
+## glm(formula = cbind(total_qrdr_n, total_seq_typhoid_n - total_qrdr_n) ~ 
+##     lag(total_prescrip_n) + total_bc_n, family = &quot;binomial&quot;, 
+##     data = entire_recruitment_period)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -1.7227  -0.5009  -0.3575  -0.1978   2.0085  
+## 
+## Coefficients:
+##                         Estimate Std. Error z value Pr(&gt;|z|)    
+## (Intercept)           -4.1115166  0.8278339  -4.967 6.81e-07 ***
+## lag(total_prescrip_n)  0.0410308  0.0122621   3.346 0.000819 ***
+## total_bc_n            -0.0007138  0.0019616  -0.364 0.715934    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 34.785  on 33  degrees of freedom
+## Residual deviance: 20.877  on 31  degrees of freedom
+##   (1 observation deleted due to missingness)
+## AIC: 38.7
+## 
+## Number of Fisher Scoring iterations: 6</code></pre>
+<pre class="r"><code>m1_summary &lt;- broom.mixed::tidy(m1, exponentiate = TRUE, conf.int = TRUE)
+m1_summary  %&gt;% kbl() %&gt;% kable_styling()</code></pre>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+term
+</th>
+<th style="text-align:right;">
+estimate
+</th>
+<th style="text-align:right;">
+std.error
+</th>
+<th style="text-align:right;">
+statistic
+</th>
+<th style="text-align:right;">
+p.value
+</th>
+<th style="text-align:right;">
+conf.low
+</th>
+<th style="text-align:right;">
+conf.high
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+0.0163829
+</td>
+<td style="text-align:right;">
+0.8278339
+</td>
+<td style="text-align:right;">
+-4.9665963
+</td>
+<td style="text-align:right;">
+0.0000007
+</td>
+<td style="text-align:right;">
+0.0025312
+</td>
+<td style="text-align:right;">
+0.0683787
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+lag(total_prescrip_n)
+</td>
+<td style="text-align:right;">
+1.0418842
+</td>
+<td style="text-align:right;">
+0.0122621
+</td>
+<td style="text-align:right;">
+3.3461483
+</td>
+<td style="text-align:right;">
+0.0008194
+</td>
+<td style="text-align:right;">
+1.0183766
+</td>
+<td style="text-align:right;">
+1.0699869
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+total_bc_n
+</td>
+<td style="text-align:right;">
+0.9992864
+</td>
+<td style="text-align:right;">
+0.0019616
+</td>
+<td style="text-align:right;">
+-0.3638981
+</td>
+<td style="text-align:right;">
+0.7159341
+</td>
+<td style="text-align:right;">
+0.9951009
+</td>
+<td style="text-align:right;">
+1.0029816
+</td>
+</tr>
+</tbody>
+</table>
 <pre class="r"><code>preds &lt;- augment(m, newdata = entire_recruitment_period, se_fit = TRUE) %&gt;%
   mutate(.lower=.fitted-1.96*.se.fit, 
          .upper=.fitted+1.96*.se.fit) %&gt;%
@@ -905,7 +1043,61 @@ qrdr_before_sept019 &lt;- strataa_tyvac_qrdr_typhi %&gt;% filter(`Properly forma
 qrdr_sept_oct2019 &lt;- strataa_tyvac_qrdr_typhi %&gt;% filter(`Properly formatted date` &gt;= &#39;2019-09-01&#39; &amp; `Properly formatted date` &lt;= &#39;2019-10-31&#39;)
 
 mutations_before_sept2019 &lt;- qrdr_before_sept019 %&gt;% group_by(QRDR) %&gt;% summarise(n = n())
-mutations_sept_oct2019 &lt;- qrdr_sept_oct2019 %&gt;% group_by(QRDR) %&gt;% summarise(n = n())</code></pre>
+mutations_sept_oct2019 &lt;- qrdr_sept_oct2019 %&gt;% group_by(QRDR) %&gt;% summarise(n = n())
+
+#before_sept19 &lt;- entire_recruitment_period %&gt;% filter(`Month` &lt; &#39;2019-09-01&#39;)
+#after_sept19 &lt;- entire_recruitment_period %&gt;% filter(`Month` &gt;= &#39;2019-09-01&#39;)
+
+before_after_sept19 &lt;- entire_recruitment_period %&gt;% mutate(before_after_sept19 = ifelse(Month &lt; &#39;2019-09-01&#39;, &#39;before_sept19&#39;, &#39;after_sept19&#39;)) %&gt;% group_by(before_after_sept19, ) %&gt;% summarise(total_seq_typhoid_n = sum(total_seq_typhoid_n), total_qrdr_n = sum(total_qrdr_n)) %&gt;% mutate(pct_qrdr = (total_qrdr_n / total_seq_typhoid_n) * 100)
+before_after_sept19 %&gt;% kbl() %&gt;% kable_styling()</code></pre>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+before_after_sept19
+</th>
+<th style="text-align:right;">
+total_seq_typhoid_n
+</th>
+<th style="text-align:right;">
+total_qrdr_n
+</th>
+<th style="text-align:right;">
+pct_qrdr
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+after_sept19
+</td>
+<td style="text-align:right;">
+18
+</td>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:right;">
+33.333333
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+before_sept19
+</td>
+<td style="text-align:right;">
+175
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+2.285714
+</td>
+</tr>
+</tbody>
+</table>
 <p>There were 4 QRDR Typhi isolated between 1st October 2016 and 31th
 August 2019.</p>
 <p>There were 6 QRDR Typhi isolated between 1st September 2019 and 31st
