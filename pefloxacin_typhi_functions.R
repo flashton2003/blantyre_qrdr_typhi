@@ -115,7 +115,10 @@ plot_typh_presc_qrdr_bc_n <- function(input_data) {
   
   cipro_prescrip_graph <- ggplot(input_data, aes(x = Month, y = total_prescrip_n)) + 
     geom_bar(stat = "identity") + 
-    ylab('# Ciprofloxacin prescriptions')
+    geom_point(aes(x = Month, y = (total_qrdr_n / total_seq_typhoid_n) * 125), colour="red") +
+    ylab('# Ciprofloxacin prescriptions') +
+    scale_y_continuous("# Ciprofloxacin prescriptions", sec.axis = sec_axis(~ . / 125, name = "Proportion of Typhi that were QRDR", breaks = seq(0, 1, by = 0.2)))
+    
   
   qrdr_graph <- ggplot(input_data, aes(x = Month, y = total_qrdr_n)) + 
     geom_bar(stat = "identity") +
@@ -130,7 +133,7 @@ plot_typh_presc_qrdr_bc_n <- function(input_data) {
     geom_bar(stat = "identity") +
     ylab('# blood cultures')
   
-  p <- typhoid_graph / cipro_prescrip_graph / qrdr_graph / qrdr_proportion_typhoid_graph / bc_graph + plot_layout(heights = c(5,5,5,5,5))
+  p <- bc_graph / typhoid_graph  / qrdr_graph / cipro_prescrip_graph  + plot_layout(heights = c(5,5,5,5,5))
   
   return(p)
   
