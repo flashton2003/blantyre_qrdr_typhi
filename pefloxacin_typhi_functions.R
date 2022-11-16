@@ -111,18 +111,21 @@ plot_typh_presc_qrdr_bc_per100000 <- function(input_data) {
 plot_typh_presc_qrdr_bc_n <- function(input_data) {
   typhoid_graph <- ggplot(input_data, aes(x = Month, y = total_seq_typhoid_n)) + 
     geom_bar(stat = "identity") + 
-    ylab('# Sequencing confirmed typhoid')
+    ylab('# Sequencing confirmed typhoid') +
+    ggtitle('B)')
   
   cipro_prescrip_graph <- ggplot(input_data, aes(x = Month, y = total_prescrip_n)) + 
     geom_bar(stat = "identity") + 
     geom_point(aes(x = Month, y = (total_qrdr_n / total_seq_typhoid_n) * 125), colour="red") +
     ylab('# Ciprofloxacin prescriptions') +
-    scale_y_continuous("# Ciprofloxacin prescriptions", sec.axis = sec_axis(~ . / 125, name = "Proportion of Typhi that were QRDR", breaks = seq(0, 1, by = 0.2)))
+    scale_y_continuous("# Ciprofloxacin prescriptions", sec.axis = sec_axis(~ . / 125, name = "Prop. Typhi w/QRDR mutation", breaks = seq(0, 1, by = 0.2))) +
+    ggtitle('D)')
     
   
   qrdr_graph <- ggplot(input_data, aes(x = Month, y = total_qrdr_n)) + 
     geom_bar(stat = "identity") +
-    ylab('# S. Typhi with QRDR mutations')
+    ylab('# S. Typhi with QRDR mutations') +
+    ggtitle('C)')
   
   qrdr_proportion_typhoid_graph <-ggplot(input_data, aes(x = Month, y = total_qrdr_n / total_seq_typhoid_n)) +
     geom_point(colour="firebrick", shape=4) +
@@ -131,7 +134,8 @@ plot_typh_presc_qrdr_bc_n <- function(input_data) {
   
   bc_graph <- ggplot(input_data, aes(x = Month, y = total_bc_n)) + 
     geom_bar(stat = "identity") +
-    ylab('# blood cultures')
+    ylab('# blood cultures') +
+    ggtitle('A)')
   
   p <- bc_graph / typhoid_graph  / qrdr_graph / cipro_prescrip_graph  + plot_layout(heights = c(5,5,5,5,5))
   

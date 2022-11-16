@@ -190,9 +190,12 @@ There were `r total_qech_typhi_tested` total qech typhi tested, and `r total_qec
 
 Graphs of the counts of typhi cases, qrdr cases, cipro prescriptions and blood cultures from the entire strataa/tyvac recruitment period.
 
+# todo - need to get access to the qrdr mutations per month here for colouring in figure 2.
+# can get from 2022.09.15.qrdr_typhi.one_per_patient.csv
+
 ```{r, fig.width = 6, fig.height = 12}
 entire_period_tpqb_graph <- plot_typh_presc_qrdr_bc_n(entire_recruitment_period) # tpqb stands for typhoid, prescriptions, qrdr and blood cultures
-entire_period_tpqb_graph + plot_annotation('Combined STRATAA & TyVAC period')
+entire_period_tpqb_graph
 ```
 
 ### Numbers for Figure 2
