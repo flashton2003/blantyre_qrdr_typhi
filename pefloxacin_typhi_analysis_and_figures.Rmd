@@ -188,20 +188,26 @@ There were `r total_qech_typhi_tested` total qech typhi tested, and `r total_qec
 
 ## Figure 2
 
+Read in the info about the qrdr samples.
+
+```{r}
+strataa_tyvac_qrdr_typhi <- read_csv(strataa_tyvac_qrdr_typhi_handle, col_types = cols(`Properly formatted date` = col_date(format = "%Y-%m-%d")))
+strataa_tyvac_qrdr_typhi$Month <- as.Date(cut(strataa_tyvac_qrdr_typhi$`Properly formatted date`, breaks = "month"))
+```
+
 Graphs of the counts of typhi cases, qrdr cases, cipro prescriptions and blood cultures from the entire strataa/tyvac recruitment period.
 
 # todo - need to get access to the qrdr mutations per month here for colouring in figure 2.
 # can get from 2022.09.15.qrdr_typhi.one_per_patient.csv
 
 ```{r, fig.width = 6, fig.height = 12}
-entire_period_tpqb_graph <- plot_typh_presc_qrdr_bc_n(entire_recruitment_period) # tpqb stands for typhoid, prescriptions, qrdr and blood cultures
+entire_period_tpqb_graph <- plot_typh_presc_qrdr_bc_n(entire_recruitment_period, strataa_tyvac_qrdr_typhi) # tpqb stands for typhoid, prescriptions, qrdr and blood cultures
 entire_period_tpqb_graph
 ```
 
 ### Numbers for Figure 2
 
 ```{r}
-strataa_tyvac_qrdr_typhi <- read_csv(strataa_tyvac_qrdr_typhi_handle, col_types = cols(`Properly formatted date` = col_date(format = "%Y-%m-%d")))
 qrdr_before_sept019 <- strataa_tyvac_qrdr_typhi %>% filter(`Properly formatted date` < '2019-09-01')
 qrdr_sept_oct2019 <- strataa_tyvac_qrdr_typhi %>% filter(`Properly formatted date` >= '2019-09-01' & `Properly formatted date` <= '2019-10-31')
 

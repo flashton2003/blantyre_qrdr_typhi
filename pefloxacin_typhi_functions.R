@@ -108,7 +108,10 @@ plot_typh_presc_qrdr_bc_per100000 <- function(input_data) {
   return(p)
 }
 
-plot_typh_presc_qrdr_bc_n <- function(input_data) {
+plot_typh_presc_qrdr_bc_n <- function(input_data, strataa_tyvac_qrdr_typhi) {
+  
+  strataa_tyvac_qrdr_typhi_by_mutation_by_month <- strataa_tyvac_qrdr_typhi %>% group_by(QRDR, Month) %>% summarise(n = n())
+  
   typhoid_graph <- ggplot(input_data, aes(x = Month, y = total_seq_typhoid_n)) + 
     geom_bar(stat = "identity") + 
     ylab('# Sequencing confirmed typhoid') +
@@ -122,11 +125,12 @@ plot_typh_presc_qrdr_bc_n <- function(input_data) {
     ggtitle('D)')
     
   
-  qrdr_graph <- ggplot(input_data, aes(x = Month, y = total_qrdr_n)) + 
-    geom_bar(stat = "identity") +
+  qrdr_graph <- ggplot(strataa_tyvac_qrdr_typhi_by_mutation_by_month, aes(x = Month, y = n, fill = QRDR)) + 
+    geom_bar(stat = 'identity') +
     ylab('# S. Typhi with QRDR mutations') +
     ggtitle('C)')
   
+  # not using this one anymore, combined with the cipro_prescrip_graph
   qrdr_proportion_typhoid_graph <-ggplot(input_data, aes(x = Month, y = total_qrdr_n / total_seq_typhoid_n)) +
     geom_point(colour="firebrick", shape=4) +
     scale_y_continuous(labels = scales::percent) +
