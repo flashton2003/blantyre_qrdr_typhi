@@ -24,12 +24,13 @@ cases_bc_qrdr_prescrip_microconf_handle <- 'data/2022.09.14.pef_typhi.cases_bc_q
 qech_pef_by_month_handle <- 'data/2022.09.14.qech_pef_results_per_month.csv' 
 strataa_tyvac_qrdr_typhi_handle <- 'data/2022.09.15.strataa_tyvac_qrdr_typhi.one_per_patient.csv'
 tree_summaries_handle <- 'data/2022.09.16.tree_summaries.csv'
+sequencing_confirmed_typhi_opp_handle <- 'data/2022.09.14.sequencing_confirmed_typhi_opp.csv'
 ```
 
 Data has been pulled in from various sources and cleaned using `pefloxacin_typhi_data_cleaning.Rmd`. The clean data has been saved as `data/cases_bc_qrdr_prescrip_microconf_handle`.
 
 ```{r}
-
+sequencing_confirmed_typhi_opp <- read_csv(sequencing_confirmed_typhi_opp_handle)
 entire_recruitment_period <- read_csv(cases_bc_qrdr_prescrip_microconf_handle)
 ```
 
@@ -159,6 +160,8 @@ This is a figure of the number of S. Typhi at QECH that were cipro sensitive and
 
 qech_pef_by_month <- read_csv(qech_pef_by_month_handle)
 
+
+
 qech_n_graph <- ggplot(qech_pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`)) + 
   geom_bar(stat = "identity") + 
   ylab("Count") +
@@ -174,6 +177,14 @@ qech_prop_graph <- ggplot(qech_pef_by_month, aes(x = Month, y = n, fill = `Cipro
 
 qech_n_graph / qech_prop_graph #+ plot_layout(heights = c(100, 100))
 
+```
+
+Test for trend in proportions
+
+```{r}
+qech_pef_by_month_w <- pivot_wider(qech_pef_by_month, names_from = `Cipro MIC res?`, values_from = n) %>% replace_na(list(DCS = 0, R= 0)) %>% mutate(n = S + DCS + R, e = DCS + R)
+
+prop.trend.test(qech_pef_by_month_w$e, qech_pef_by_month_w$n)
 ```
 
 ### Numbers for Figure 1
@@ -197,8 +208,6 @@ strataa_tyvac_qrdr_typhi$Month <- as.Date(cut(strataa_tyvac_qrdr_typhi$`Properly
 
 Graphs of the counts of typhi cases, qrdr cases, cipro prescriptions and blood cultures from the entire strataa/tyvac recruitment period.
 
-# todo - need to get access to the qrdr mutations per month here for colouring in figure 2.
-# can get from 2022.09.15.qrdr_typhi.one_per_patient.csv
 
 ```{r, fig.width = 6, fig.height = 12}
 entire_period_tpqb_graph <- plot_typh_presc_qrdr_bc_n(entire_recruitment_period, strataa_tyvac_qrdr_typhi) # tpqb stands for typhoid, prescriptions, qrdr and blood cultures
@@ -220,7 +229,33 @@ mutations_sept_oct2019 <- qrdr_sept_oct2019 %>% group_by(QRDR) %>% summarise(n =
 before_after_sept19 <- entire_recruitment_period %>% mutate(before_after_sept19 = ifelse(Month < '2019-09-01', 'before_sept19', 'after_sept19')) %>% group_by(before_after_sept19, ) %>% summarise(total_seq_typhoid_n = sum(total_seq_typhoid_n), total_qrdr_n = sum(total_qrdr_n)) %>% mutate(pct_qrdr = (total_qrdr_n / total_seq_typhoid_n) * 100)
 before_after_sept19 %>% kbl() %>% kable_styling()
 
+
+
 ```
+
+Get the Number of typhoid cases before/after Dec 2018
+
+```{r}
+
+entire_recruitment_period %>% mutate(bef_aft_dec18 = ifelse(Month <= "2018-12-01", 'before_dec18', 'after_dec18')) %>% group_by(bef_aft_dec18) %>% summarise(min_tyhpoid = min(total_seq_typhoid_n), max_tyhpoid = max(total_seq_typhoid_n), median_tyhpoid = median(total_seq_typhoid_n)) %>% kbl() %>% kable_styling()
+
+```
+
+
+Get the max, min and average number of prescriptions and qrdr cases before/after May 2019.
+
+```{r}
+entire_recruitment_period %>% mutate(bef_aft_may19 = ifelse(Month <= "2019-05-01", 'before_may19', 'after_may19')) %>% group_by(bef_aft_may19) %>% summarise(min_prescrip = min(total_prescrip_n), max_prescrip = max(total_prescrip_n), median_prescrip = median(total_prescrip_n), min_qrdr = min(total_qrdr_n), max_qrdr = max(total_qrdr_n), mean_qrdr = mean(total_qrdr_n)) %>% kbl() %>% kable_styling()
+
+```
+
+
+```{r}
+x <- c(4, 6)
+y <- c(171, 12)
+prop.test(x, y, p = NULL, alternative = "two.sided")
+```
+
 
 There were `r nrow(qrdr_before_sept019)` QRDR Typhi isolated between 1st October 2016 and 31th August 2019.
 
@@ -230,6 +265,17 @@ Before Sept2019
 `r mutations_before_sept2019  %>% kbl() %>% kable_styling()`
 Sept-Oct 2019
 `r mutations_sept_oct2019  %>% kbl() %>% kable_styling()`
+
+
+# Pheno-geno comparison
+
+
+```{r}
+pheno_or_geno <- sequencing_confirmed_typhi_opp %>% filter((`Pefloxacin 5` == 'R' | `Pefloxacin 5` == 'I') | (`Cipro MIC res?` == 'DCS' | `Cipro MIC res?` == 'R') | !is.na(QRDR)) %>% select(c(`Request Number`, `Pefloxacin 5`, `Ciprofloxacin MIC`, `Cipro MIC res?`, QRDR, any_qrdr)) %>% replace_na(list(QRDR = 'None', any_qrdr = 'None'))
+
+table(pheno_or_geno$any_qrdr, pheno_or_geno$`Cipro MIC res?`)
+
+```
 
 
 # Summaries of the numbers in each phylo
