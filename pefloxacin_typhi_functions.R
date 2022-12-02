@@ -141,7 +141,7 @@ plot_typh_presc_qrdr_bc_n <- function(input_data, strataa_tyvac_qrdr_typhi) {
     ylab('# blood cultures') +
     ggtitle('A)')
   
-  p <- bc_graph / typhoid_graph  / qrdr_graph / cipro_prescrip_graph  + plot_layout(heights = c(5,5,5,5,5))
+  p <- bc_graph / typhoid_graph  / cipro_prescrip_graph / qrdr_graph  + plot_layout(heights = c(5,5,5,5,5))
   
   return(p)
   
