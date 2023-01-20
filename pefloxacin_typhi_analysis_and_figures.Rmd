@@ -81,26 +81,32 @@ m1_summary  %>% kbl() %>% kable_styling()
 
 This is a figure of the number of S. Typhi at QECH that were cipro sensitive and DCS.
 
-```{r Figure1, fig.width = 8, fig.height = 10}
+```{r Figure1, fig.width = 8, fig.height = 4}
 
 qech_pef_by_month <- read_csv(qech_pef_by_month_handle)
 
-qech_n_graph <- ggplot(qech_pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`)) + 
+qech_pef_by_month_for_plotting <- qech_pef_by_month
+df <- qech_pef_by_month_for_plotting %>% group_by(Month) %>% summarise(n = sum(n)) %>% mutate(n = n / 50)
+
+qech_n_graph <- ggplot(qech_pef_by_month_for_plotting, aes(x = Month, y = n, fill = `Cipro MIC res?`)) + 
   geom_bar(stat = "identity") + 
   ylab("Count") +
   theme(axis.text=element_text(size=12), axis.title=element_text(size=14)) +
   ggtitle('A)') + 
-  scale_fill_discrete(name = "Ciprofloxacin\nMIC result",  labels = c("Decreased Ciprofloxacin Susceptibility", "Resistant", "Sensitive"))
+  scale_fill_discrete(name = "Ciprofloxacin\nMIC result",  labels = c("Decreased\nCiprofloxacin\nSusceptibility", "Resistant", "Sensitive"))
 
-qech_prop_graph <- ggplot(qech_pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`, label = n)) + 
-  geom_bar(position = 'fill', stat = "identity") + 
-  ylab("Proportion") +
+qech_prop_graph <- ggplot() + 
+  geom_bar(qech_pef_by_month_for_plotting, mapping = aes(x = Month, y = n, fill = `Cipro MIC res?`), position = 'fill', stat = "identity") + 
+  geom_line(df, mapping = aes(x = Month, y = n)) +
+  # secondary axis plot https://stackoverflow.com/questions/3099219/ggplot-with-2-y-axes-on-each-side-and-different-scales
+  scale_y_continuous("Proportion", breaks = (seq(0,1, by = 0.2)), sec.axis = sec_axis(~ . * 50, name = "# S. Typhi isolates", breaks = seq(0, 50, by = 10))) +
   theme(axis.text=element_text(size=12), axis.title=element_text(size=14)) +
   ggtitle('B)') + 
-  scale_fill_discrete(name = "Ciprofloxacin\nMIC result", labels = c("Decreased Ciprofloxacin Susceptibility", "Resistant", "Sensitive"))
+  scale_fill_discrete(name = "Ciprofloxacin\nMIC\nresult", labels = c("Decreased\nCiprofloxacin\nSusceptibility", "Resistant", "Sensitive"))
 
+qech_prop_graph
 
-qech_n_graph / qech_prop_graph #+ plot_layout(heights = c(100, 100))
+#qech_n_graph / qech_prop_graph #+ plot_layout(heights = c(100, 100))
 
 ```
 
