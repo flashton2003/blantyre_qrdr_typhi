@@ -9,10 +9,10 @@ output: html_document
 
 ```{r message=FALSE}
 library(tidyverse)
-#library(glmmTMB) # i think we don't use this any more?
 library(patchwork)
 library(kableExtra)
 library(broom)
+library(sjPlot)
 
 source('pefloxacin_typhi_functions.R')
 ```
@@ -70,10 +70,22 @@ m1 <- glm(cbind(total_qrdr_n, total_seq_typhoid_n-total_qrdr_n) ~ lag(total_pres
          data = entire_recruitment_period, 
          family = "binomial")
 
-summary(m1)
-m1_summary <- broom.mixed::tidy(m1, exponentiate = TRUE, conf.int = TRUE)
-m1_summary  %>% kbl() %>% kable_styling()
+#summary(m1)
+#m1_summary <- broom.mixed::tidy(m1, exponentiate = TRUE, conf.int = TRUE)
+#m1_summary  %>% kbl() %>% kable_styling()
 
+tab_model(m1, dv.labels = c('Proportion of S. Typhi that have a QRDR mutant ~ Number of ciprofloxacin prescriptions'))
+
+```
+
+Checking for association between proportion of QRDR mutants and teh total number of blood cultures.
+
+```{r}
+m1 <- glm(cbind(total_qrdr_n, total_seq_typhoid_n-total_qrdr_n) ~ total_bc_n,  
+         data = entire_recruitment_period, 
+         family = "binomial")
+
+summary(m1)
 ```
 
 # Graphs
@@ -101,8 +113,7 @@ qech_prop_graph <- ggplot() +
   # secondary axis plot https://stackoverflow.com/questions/3099219/ggplot-with-2-y-axes-on-each-side-and-different-scales
   scale_y_continuous("Proportion", breaks = (seq(0,1, by = 0.2)), sec.axis = sec_axis(~ . * 50, name = "# S. Typhi isolates", breaks = seq(0, 50, by = 10))) +
   theme(axis.text=element_text(size=12), axis.title=element_text(size=14)) +
-  ggtitle('B)') + 
-  scale_fill_discrete(name = "Ciprofloxacin\nMIC\nresult", labels = c("Decreased\nCiprofloxacin\nSusceptibility", "Resistant", "Sensitive"))
+  scale_fill_discrete(name = "Ciprofloxacin\nMIC result", labels = c("Decreased\nCiprofloxacin\nSusceptibility", "Resistant", "Sensitive"))
 
 qech_prop_graph
 
