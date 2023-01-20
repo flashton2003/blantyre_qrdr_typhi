@@ -1,3 +1,11 @@
+This repository accompanies a manuscript investigating the genomic and epidemiological features of ciprofloxacin non-susceptible Salmonella Typhi in Blantyre, Malawi.
+
+# Quick start
+
+The "raw" data file is not made available due to potentially sensitive information. Therefore, a series of summary files have been generated for your convenience, and are stored in the `data` directory.
+
+Therefore, you should be able to just clone the repo, change the working directory to the cloned repo, and run the `pefloxacin_typhi_analysis_and_figures.Rmd` script, which does the analyses and plots the figures.
+
 # The role of each script
 
 `pefloxacin_typhi_data_cleaning.Rmd` is for taking the various raw data sources and producing two datasets for further analysis/plotting. These are saved in `data` directory
