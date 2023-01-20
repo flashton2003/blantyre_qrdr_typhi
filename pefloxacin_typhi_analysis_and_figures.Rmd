@@ -64,26 +64,9 @@ In total, over the entire study period there were:
 
 After discussion with Marc, want to do one model with all the data from the entire study period. It doesn't matter about the difference in recruitment criteria between strataa and tyvac because the important thing is the number of qrdr typhi per typhoid case, and the method of detecting those was consistent.
 
-
-Peter code here
-
-Question - should we be using `total_seq_typhoid_n-total_qrdr_n` or just `total_seq_typhoid_n`?
-
 ```{r glm model}
 
-m <- glm(cbind(total_qrdr_n, total_seq_typhoid_n-total_qrdr_n) ~ total_prescrip_n + total_bc_n,  
-         data = entire_recruitment_period, 
-         family = "binomial")
-
-summary(m)
-m_summary <- broom.mixed::tidy(m, exponentiate = TRUE, conf.int = TRUE)
-m_summary  %>% kbl() %>% kable_styling()
-
-entire_recruitment_period <- entire_recruitment_period %>% mutate(total_non_qrdr_typhi = total_seq_typhoid_n-total_qrdr_n)
-
-x <- cbind(entire_recruitment_period$total_qrdr_n, entire_recruitment_period$total_seq_typhoid_n-entire_recruitment_period$total_qrdr_n)
-
-m1 <- glm(cbind(total_qrdr_n, total_seq_typhoid_n-total_qrdr_n) ~ lag(total_prescrip_n) + total_bc_n,  
+m1 <- glm(cbind(total_qrdr_n, total_seq_typhoid_n-total_qrdr_n) ~ lag(total_prescrip_n),  
          data = entire_recruitment_period, 
          family = "binomial")
 
@@ -91,65 +74,7 @@ summary(m1)
 m1_summary <- broom.mixed::tidy(m1, exponentiate = TRUE, conf.int = TRUE)
 m1_summary  %>% kbl() %>% kable_styling()
 
-preds <- augment(m, newdata = entire_recruitment_period, se_fit = TRUE) %>%
-  mutate(.lower=.fitted-1.96*.se.fit, 
-         .upper=.fitted+1.96*.se.fit) %>%
-  mutate_at(.vars = vars(.fitted, .lower, .upper),
-            .funs = funs(plogis))
-
-preds %>%
-  ggplot(aes(y=.fitted, ymin=.lower, ymax=.upper, x=Month)) +
-  geom_pointrange(alpha=0.5) +
-  geom_point(aes(x=Month, y=total_qrdr_n/total_seq_typhoid_n), colour="firebrick", alpha=0.5, shape=4) +
-  scale_y_continuous(labels = scales::percent, limits = c(0,1)) +
-  scale_x_date() +
-  labs(y="Predicted % of typhoid cases with drug resistance\n(95% CI)")
-
 ```
-
-Just check with a bayesian model.
-
-```{r bayesian model, eval=FALSE}
-library(brms)
-library(tidybayes)
-
-#with a binomial distribution
-m2 <- brm(bf(total_qrdr_n | trials(total_seq_typhoid_n) ~ total_prescrip_n + total_bc_n),
-          data = entire_recruitment_period, 
-          family = binomial(),
-          chains = 4)
-
-summary(m2)
-plot(m2)
-pp_check(m2)
-#understimates the zeros
-
-preds2 <- entire_recruitment_period %>%
-  add_epred_draws(m2) %>%
-  mean_qi()
-
-preds2
-
-preds2 %>%
-  mutate(.epred_prev = .epred/total_seq_typhoid_n,
-         .lower_prev = .lower/total_seq_typhoid_n,
-         .upper_prev = .upper/total_seq_typhoid_n) %>%
-  ggplot(aes(x=Month, y =.epred_prev, ymin=.lower_prev, ymax=.upper_prev)) +
-  geom_pointrange() +
-  scale_y_continuous(labels = scales::percent, limits = c(0,1))
-
-
-
-```
-
-
-
-
-
-Todo:
-
-1. Need to do the serial autocorrelation analysis
-2. Compare AIC of nested models, e.g. https://www.scribbr.com/statistics/akaike-information-criterion/ 
 
 # Graphs
 ## Figure 1
@@ -160,19 +85,19 @@ This is a figure of the number of S. Typhi at QECH that were cipro sensitive and
 
 qech_pef_by_month <- read_csv(qech_pef_by_month_handle)
 
-
-
 qech_n_graph <- ggplot(qech_pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`)) + 
   geom_bar(stat = "identity") + 
   ylab("Count") +
   theme(axis.text=element_text(size=12), axis.title=element_text(size=14)) +
-  ggtitle('A)')
+  ggtitle('A)') + 
+  scale_fill_discrete(name = "Ciprofloxacin\nMIC result",  labels = c("Decreased Ciprofloxacin Susceptibility", "Resistant", "Sensitive"))
 
 qech_prop_graph <- ggplot(qech_pef_by_month, aes(x = Month, y = n, fill = `Cipro MIC res?`, label = n)) + 
   geom_bar(position = 'fill', stat = "identity") + 
   ylab("Proportion") +
   theme(axis.text=element_text(size=12), axis.title=element_text(size=14)) +
-  ggtitle('B)')
+  ggtitle('B)') + 
+  scale_fill_discrete(name = "Ciprofloxacin\nMIC result", labels = c("Decreased Ciprofloxacin Susceptibility", "Resistant", "Sensitive"))
 
 
 qech_n_graph / qech_prop_graph #+ plot_layout(heights = c(100, 100))
