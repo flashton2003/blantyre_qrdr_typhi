@@ -6,6 +6,8 @@ The "raw" data file is not made available due to potentially sensitive informati
 
 Therefore, you should be able to just clone the repo, change the working directory to the cloned repo, and run the `pefloxacin_typhi_analysis_and_figures.Rmd` script, which does the analyses and plots the figures.
 
+If you just want to see the details of the code without running it, you can download the `pefloxacin_typhi_analysis_and_figures.html` file and view it in a browser.
+
 # The role of each script
 
 `pefloxacin_typhi_data_cleaning.Rmd` is for taking the various raw data sources and producing two datasets for further analysis/plotting. These are saved in `data` directory
