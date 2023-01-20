@@ -9,7 +9,7 @@ output: html_document
 
 ```{r message=FALSE}
 library(tidyverse)
-library(glmmTMB)
+#library(glmmTMB) # i think we don't use this any more?
 library(patchwork)
 library(kableExtra)
 library(broom)
