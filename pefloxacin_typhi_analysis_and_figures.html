@@ -11,7 +11,7 @@
 
 <meta name="author" content="Philip Ashton" />
 
-<meta name="date" content="2023-01-20" />
+<meta name="date" content="2023-02-22" />
 
 <title>pefloxacin typhi analysis and figures</title>
 
@@ -582,7 +582,7 @@ display: none;
 
 <h1 class="title toc-ignore">pefloxacin typhi analysis and figures</h1>
 <h4 class="author">Philip Ashton</h4>
-<h4 class="date">2023-01-20</h4>
+<h4 class="date">2023-02-22</h4>
 
 </div>
 
@@ -598,6 +598,8 @@ library(kableExtra)</code></pre>
 <pre class="r"><code>library(broom)
 library(sjPlot)</code></pre>
 <pre><code>## Warning: package &#39;sjPlot&#39; was built under R version 4.1.2</code></pre>
+<pre class="r"><code>library(glue)</code></pre>
+<pre><code>## Warning: package &#39;glue&#39; was built under R version 4.1.2</code></pre>
 <pre class="r"><code>source(&#39;pefloxacin_typhi_functions.R&#39;)</code></pre>
 </div>
 <div id="read-in-data" class="section level1">
@@ -606,7 +608,15 @@ library(sjPlot)</code></pre>
 qech_pef_by_month_handle &lt;- &#39;data/2022.09.14.qech_pef_results_per_month.csv&#39; 
 strataa_tyvac_qrdr_typhi_handle &lt;- &#39;data/2022.09.15.strataa_tyvac_qrdr_typhi.one_per_patient.csv&#39;
 tree_summaries_handle &lt;- &#39;data/2022.09.16.tree_summaries.csv&#39;
-sequencing_confirmed_typhi_opp_handle &lt;- &#39;data/2022.09.14.sequencing_confirmed_typhi_opp.csv&#39;</code></pre>
+sequencing_confirmed_typhi_opp_handle &lt;- &#39;data/2022.09.14.sequencing_confirmed_typhi_opp.csv&#39;
+
+
+the_date &lt;- &#39;2023.02.22&#39;
+qech_pef_by_month_handle &lt;- glue(&#39;data/{the_date}.qech_pef_results_per_month.csv&#39;)
+sequencing_confirmed_typhi_opp_handle &lt;- glue(&#39;data/{the_date}.sequencing_confirmed_typhi_opp.csv&#39;)
+cases_bc_qrdr_prescrip_microconf_handle &lt;- glue(&#39;data/{the_date}.pef_typhi.cases_bc_qrdr_prescrip_microconf.csv&#39;)
+strataa_tyvac_qrdr_typhi_handle &lt;- glue(&#39;data/{the_date}.strataa_tyvac_qrdr_typhi.one_per_patient.csv&#39;)
+tree_summaries_handle &lt;- glue(&#39;data/{the_date}.tree_summaries.csv&#39;)</code></pre>
 <p>Data has been pulled in from various sources and cleaned using
 <code>pefloxacin_typhi_data_cleaning.Rmd</code>. The clean data has been
 saved as <code>data/cases_bc_qrdr_prescrip_microconf_handle</code>.</p>
@@ -1114,7 +1124,7 @@ table(pheno_or_geno$any_qrdr, pheno_or_geno$`Cipro MIC res?`)</code></pre>
 <pre><code>##       
 ##        DCS S
 ##   None   1 4
-##   QRDR   7 1</code></pre>
+##   QRDR   9 1</code></pre>
 </div>
 <div id="summaries-of-the-numbers-in-each-phylo" class="section level1">
 <h1>Summaries of the numbers in each phylo</h1>

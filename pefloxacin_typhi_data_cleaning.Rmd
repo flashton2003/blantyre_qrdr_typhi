@@ -22,6 +22,7 @@ In this document we are analysing Salmonella Typhi from the STRATAA and TyVAC st
 library(tidyverse)
 library(readxl)
 library(kableExtra)
+library(glue)
 #library(lubridate)
 #library(here)
 #library(tsibble)
@@ -82,8 +83,21 @@ malawi_and_zim_genomes <- read_excel("/Users/flashton/Dropbox/GordonGroup/STRATA
 
 malawian_and_context <- read_excel("/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/phylo/results/2021.11.09/malawi_and_context/2022.08.30.pefloxcain_typhi_paper_line_list.malawi_and_context_annot.xlsx")
 
+all_strataa_prescriptions <- read_csv(strataa_prescriptions_handle, col_types = cols(ps12_dov = col_datetime(format = "%d/%m/%Y %H:%M")))
 
+```
 
+# Outhandles
+
+```{r}
+
+the_date <- '2023.02.22'
+qech_pef_by_month_outhandle <- glue('data/{the_date}.qech_pef_results_per_month.csv')
+sequencing_confirmed_typhi_opp_outhandle <- glue('data/{the_date}.sequencing_confirmed_typhi_opp.csv')
+entire_study_period_outhandle <- glue('data/{the_date}.pef_typhi.cases_bc_qrdr_prescrip_microconf.csv')
+strataa_tyvac_qrdr_typhi_outhandle <- glue('data/{the_date}.strataa_tyvac_qrdr_typhi.one_per_patient.csv')
+all_tree_summaries_outhandle <- glue('data/{the_date}.tree_summaries.csv')
+all_strataa_prescriptions_outhandle <- glue('data/{the_date}.all_strataa_prescriptions.csv')
 ```
 
 # QECH pef testing results
@@ -93,7 +107,7 @@ qech_pef_tested_typhi <- one_typhi_per_patient %>% filter(grepl('QECH', Study)) 
 qech_pef_by_month <- qech_pef_tested_typhi %>% group_by(Month, `Cipro MIC res?`) %>% summarise(n = n())
 qech_pef_by_month <- qech_pef_by_month %>% filter(Month >= "2019-01-01")
 
-write_csv(qech_pef_by_month, 'data/2022.09.14.qech_pef_results_per_month.csv')
+write_csv(qech_pef_by_month, qech_pef_by_month_outhandle)
 ```
 
 # Calculate the total number of microbiologically confirmed typhi in STRATAA/TyVAC
@@ -116,7 +130,7 @@ Here we filter the input line list to extract the *sequenced* tyvac samples from
 sequencing_confirmed_typhi_opp <-  micro_confirmed_opp %>% filter(!is.na(`Sequenced?`) & `overall sequencing identification` == "Typhi")
 sequencing_confirmed_typhi_all <- micro_confirmed_all %>% filter(!is.na(`Sequenced?`) & `overall sequencing identification` == "Typhi")
 
-write_csv(sequencing_confirmed_typhi_opp, 'data/2022.09.14.sequencing_confirmed_typhi_opp.csv')
+write_csv(sequencing_confirmed_typhi_opp, sequencing_confirmed_typhi_opp_outhandle)
 
 
 
@@ -132,6 +146,17 @@ strataa_cases_by_month$strataa_typhoid_per100000 <- (strataa_cases_by_month$stra
 
 sequenced_cases_by_month <- combine_by_month(tyvac_cases_by_month, strataa_cases_by_month, cases_start, cases_end, 'cases')
 sequenced_isolates_by_month <- sequencing_confirmed_typhi_all %>% group_by(Month) %>% summarise(total_seq_typhi_n = n())
+```
+
+# age and sex breakdown
+
+```{r}
+
+ages <- c(tyvac_cases$`Patient Age`, strataa_cases$`Patient Age`)
+mean(ages, na.rm = TRUE)
+
+sex <- c(tyvac_cases$Gender, strataa_cases$Gender)
+table(sex)
 ```
 
 # QRDR Typhi incidence
@@ -199,8 +224,7 @@ entire_study_period[is.na(entire_study_period)] <- 0
 
 entire_study_period  %>% kbl() %>% kable_styling()
 
-
-write_csv(entire_study_period, 'data/2022.09.14.pef_typhi.cases_bc_qrdr_prescrip_microconf.csv')
+write_csv(entire_study_period, entire_study_period_outhandle)
 ```
 
 
@@ -212,7 +236,7 @@ Filter to get only samples that have a QRDR mutation, that were either in tyvac-
 #strataa_tyvac_qrdr_typhi <- sequencing_confirmed_typhi %>% filter(!is.na(QRDR)) %>% filter((Study == 'TyVAC' & `TyVAC site` == 'Ndirande') | grepl('STRATAA', Study)) %>% arrange(`Properly formatted date`)
 strataa_tyvac_qrdr_typhi <- sequencing_confirmed_typhi_opp %>% filter(!is.na(QRDR)) %>% filter(Study == 'TyVAC' | grepl('STRATAA', Study)) %>% arrange(`Properly formatted date`)
 
-write_csv(strataa_tyvac_qrdr_typhi, 'data/2022.09.15.strataa_tyvac_qrdr_typhi.one_per_patient.csv')
+write_csv(strataa_tyvac_qrdr_typhi, strataa_tyvac_qrdr_typhi_outhandle)
 
 ```
 
@@ -245,10 +269,23 @@ malawian_and_context_summary <- malawian_and_context %>% mutate(study_summary = 
 
 all_tree_summaries <- do.call("rbind", list(malawian_genomes_summary, malawi_zim_genomes_summary, malawian_and_context_summary))
 
-write_csv(all_tree_summaries, 'data/2022.09.16.tree_summaries.csv')
+write_csv(all_tree_summaries, all_tree_summaries_outhandle)
 
 ```
 
 
 
+
+
+# all strataa prescriptions
+
+```{r}
+all_strataa_prescriptions <- all_strataa_prescriptions %>% filter(!is.na(ps44_cipro))
+
+all_strataa_prescriptions$month <- as.Date(cut(all_strataa_prescriptions$ps12_dov, breaks = "month"))
+
+all_strataa_prescriptions_g <- all_strataa_prescriptions %>% group_by(month) %>% summarise(cipro = sum(ps44_cipro), amox = sum(ps44_amox), chloramph = sum(ps44_chloramph), coamox = sum(ps44_coamox), cotrimox = sum(ps44_cotrimox), azithro = sum(ps44_azithrom), ceftriax = sum(ps44_ceftriax)) %>% pivot_longer(!month, names_to = 'antibiotic', values_to = 'number') %>% filter(month < '2019-11-01')
+
+write_csv(all_strataa_prescriptions_g, all_strataa_prescriptions_outhandle)
+```
 

@@ -13,6 +13,7 @@ library(patchwork)
 library(kableExtra)
 library(broom)
 library(sjPlot)
+library(glue)
 
 source('pefloxacin_typhi_functions.R')
 ```
@@ -20,11 +21,14 @@ source('pefloxacin_typhi_functions.R')
 # Read in data
 
 ```{r}
-cases_bc_qrdr_prescrip_microconf_handle <- 'data/2022.09.14.pef_typhi.cases_bc_qrdr_prescrip_microconf.csv'
-qech_pef_by_month_handle <- 'data/2022.09.14.qech_pef_results_per_month.csv' 
-strataa_tyvac_qrdr_typhi_handle <- 'data/2022.09.15.strataa_tyvac_qrdr_typhi.one_per_patient.csv'
-tree_summaries_handle <- 'data/2022.09.16.tree_summaries.csv'
-sequencing_confirmed_typhi_opp_handle <- 'data/2022.09.14.sequencing_confirmed_typhi_opp.csv'
+
+the_date <- '2023.02.22'
+qech_pef_by_month_handle <- glue('data/{the_date}.qech_pef_results_per_month.csv')
+sequencing_confirmed_typhi_opp_handle <- glue('data/{the_date}.sequencing_confirmed_typhi_opp.csv')
+cases_bc_qrdr_prescrip_microconf_handle <- glue('data/{the_date}.pef_typhi.cases_bc_qrdr_prescrip_microconf.csv')
+strataa_tyvac_qrdr_typhi_handle <- glue('data/{the_date}.strataa_tyvac_qrdr_typhi.one_per_patient.csv')
+tree_summaries_handle <- glue('data/{the_date}.tree_summaries.csv')
+all_strataa_prescriptions_handle <- glue('data/{the_date}.all_strataa_prescriptions.csv')
 ```
 
 Data has been pulled in from various sources and cleaned using `pefloxacin_typhi_data_cleaning.Rmd`. The clean data has been saved as `data/cases_bc_qrdr_prescrip_microconf_handle`.
@@ -245,6 +249,13 @@ ggplot(seq_unseq_cases_l, aes(x = Month, y = Number, fill = type)) +
   geom_bar(stat = "identity")
 ```
 
+# Supplementary Figure 4 - numbers of strataa prescriptions of different drugs
+
+```{r}
+all_strataa_prescriptions_g <- read_csv(all_strataa_prescriptions_handle)
+ggplot(df_g, aes(x = month, y = number, colour = antibiotic)) + geom_line()
+
+```
 
 
 
