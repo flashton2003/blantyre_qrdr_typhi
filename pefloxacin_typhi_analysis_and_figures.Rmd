@@ -25,6 +25,7 @@ source('pefloxacin_typhi_functions.R')
 the_date <- '2023.02.22'
 qech_pef_by_month_handle <- glue('data/{the_date}.qech_pef_results_per_month.csv')
 sequencing_confirmed_typhi_opp_handle <- glue('data/{the_date}.sequencing_confirmed_typhi_opp.csv')
+sequencing_confirmed_typhi_all_handle <- glue('data/{the_date}.sequencing_confirmed_typhi_all.csv')
 cases_bc_qrdr_prescrip_microconf_handle <- glue('data/{the_date}.pef_typhi.cases_bc_qrdr_prescrip_microconf.csv')
 strataa_tyvac_qrdr_typhi_handle <- glue('data/{the_date}.strataa_tyvac_qrdr_typhi.one_per_patient.csv')
 tree_summaries_handle <- glue('data/{the_date}.tree_summaries.csv')
@@ -35,6 +36,7 @@ Data has been pulled in from various sources and cleaned using `pefloxacin_typhi
 
 ```{r}
 sequencing_confirmed_typhi_opp <- read_csv(sequencing_confirmed_typhi_opp_handle)
+sequencing_confirmed_typhi_all <- read_csv(sequencing_confirmed_typhi_all_handle)
 entire_recruitment_period <- read_csv(cases_bc_qrdr_prescrip_microconf_handle)
 ```
 
@@ -63,6 +65,17 @@ In total, over the entire study period there were:
 * `r qrdr_n` QRDR typhoid (i.e. resistant)
 * `r format(bc_n, scientific=FALSE)` blood cultures
 
+```{r}
+
+new_ones_opp <- sequencing_confirmed_typhi_opp %>% filter(`paper sequences reported in` == 'This paper')
+new_ones_all <- sequencing_confirmed_typhi_all %>% filter(`paper sequences reported in` == 'This paper')
+
+```
+
+In terms of new sequences (not in Dyson et al., 2023), there are:
+
+* `r nrow(new_ones_all)` total new sequences
+* from `r nrow(new_ones_opp)` total new patients
 
 # Investigating associations
 
@@ -253,7 +266,7 @@ ggplot(seq_unseq_cases_l, aes(x = Month, y = Number, fill = type)) +
 
 ```{r}
 all_strataa_prescriptions_g <- read_csv(all_strataa_prescriptions_handle)
-ggplot(df_g, aes(x = month, y = number, colour = antibiotic)) + geom_line()
+ggplot(all_strataa_prescriptions_g, aes(x = month, y = number, colour = antibiotic)) + geom_line()
 
 ```
 

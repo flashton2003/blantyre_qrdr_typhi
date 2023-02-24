@@ -11,7 +11,7 @@
 
 <meta name="author" content="Philip Ashton" />
 
-<meta name="date" content="2023-02-22" />
+<meta name="date" content="2023-02-23" />
 
 <title>DCS Typhi in Blantyre</title>
 
@@ -1723,7 +1723,7 @@ border-radius: 0px;
 
 <h1 class="title toc-ignore">DCS Typhi in Blantyre</h1>
 <h4 class="author">Philip Ashton</h4>
-<h4 class="date">2023-02-22</h4>
+<h4 class="date">2023-02-23</h4>
 
 </div>
 
@@ -1797,16 +1797,20 @@ all_malawian_genomes &lt;- read_excel(&quot;/Users/flashton/Dropbox/GordonGroup/
 
 malawi_and_zim_genomes &lt;- read_excel(&quot;/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/phylo/results/2021.11.09/malawi_and_zim_clade/prespecified_model_outlier/2021.11.09.MWI_ZIM_clade.with_outlier.annot.xlsx&quot;)
 
-malawian_and_context &lt;- read_excel(&quot;/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/phylo/results/2021.11.09/malawi_and_context/2022.08.30.pefloxcain_typhi_paper_line_list.malawi_and_context_annot.xlsx&quot;)</code></pre>
+malawian_and_context &lt;- read_excel(&quot;/Users/flashton/Dropbox/GordonGroup/STRATAA_pefloxacin_resistant_typhi/phylo/results/2021.11.09/malawi_and_context/2022.08.30.pefloxcain_typhi_paper_line_list.malawi_and_context_annot.xlsx&quot;)
+
+all_strataa_prescriptions &lt;- read_csv(strataa_prescriptions_handle, col_types = cols(ps12_dov = col_datetime(format = &quot;%d/%m/%Y %H:%M&quot;)))</code></pre>
 </div>
 <div id="outhandles" class="section level1" number="4">
 <h1><span class="header-section-number">4</span> Outhandles</h1>
 <pre class="r"><code>the_date &lt;- &#39;2023.02.22&#39;
 qech_pef_by_month_outhandle &lt;- glue(&#39;data/{the_date}.qech_pef_results_per_month.csv&#39;)
 sequencing_confirmed_typhi_opp_outhandle &lt;- glue(&#39;data/{the_date}.sequencing_confirmed_typhi_opp.csv&#39;)
+sequencing_confirmed_typhi_all_outhandle &lt;- glue(&#39;data/{the_date}.sequencing_confirmed_typhi_all.csv&#39;)
 entire_study_period_outhandle &lt;- glue(&#39;data/{the_date}.pef_typhi.cases_bc_qrdr_prescrip_microconf.csv&#39;)
 strataa_tyvac_qrdr_typhi_outhandle &lt;- glue(&#39;data/{the_date}.strataa_tyvac_qrdr_typhi.one_per_patient.csv&#39;)
-all_tree_summaries_outhandle &lt;- glue(&#39;data/{the_date}.tree_summaries.csv&#39;)</code></pre>
+all_tree_summaries_outhandle &lt;- glue(&#39;data/{the_date}.tree_summaries.csv&#39;)
+all_strataa_prescriptions_outhandle &lt;- glue(&#39;data/{the_date}.all_strataa_prescriptions.csv&#39;)</code></pre>
 </div>
 <div id="qech-pef-testing-results" class="section level1" number="5">
 <h1><span class="header-section-number">5</span> QECH pef testing
@@ -1836,7 +1840,7 @@ tyvac samples from ndirande and the sequenced strataa samples.</p>
 sequencing_confirmed_typhi_all &lt;- micro_confirmed_all %&gt;% filter(!is.na(`Sequenced?`) &amp; `overall sequencing identification` == &quot;Typhi&quot;)
 
 write_csv(sequencing_confirmed_typhi_opp, sequencing_confirmed_typhi_opp_outhandle)
-
+write_csv(sequencing_confirmed_typhi_all, sequencing_confirmed_typhi_all_outhandle)
 
 
 # can use == &#39;TyVAC&#39; because the STRATAA/TyVAC ones will be caught in the STRATAA select
@@ -2949,6 +2953,17 @@ malawian_and_context_summary &lt;- malawian_and_context %&gt;% mutate(study_summ
 all_tree_summaries &lt;- do.call(&quot;rbind&quot;, list(malawian_genomes_summary, malawi_zim_genomes_summary, malawian_and_context_summary))
 
 write_csv(all_tree_summaries, all_tree_summaries_outhandle)</code></pre>
+</div>
+<div id="all-strataa-prescriptions" class="section level1" number="15">
+<h1><span class="header-section-number">15</span> all strataa
+prescriptions</h1>
+<pre class="r"><code>all_strataa_prescriptions &lt;- all_strataa_prescriptions %&gt;% filter(!is.na(ps44_cipro))
+
+all_strataa_prescriptions$month &lt;- as.Date(cut(all_strataa_prescriptions$ps12_dov, breaks = &quot;month&quot;))
+
+all_strataa_prescriptions_g &lt;- all_strataa_prescriptions %&gt;% group_by(month) %&gt;% summarise(cipro = sum(ps44_cipro), amox = sum(ps44_amox), chloramph = sum(ps44_chloramph), coamox = sum(ps44_coamox), cotrimox = sum(ps44_cotrimox), azithro = sum(ps44_azithrom), ceftriax = sum(ps44_ceftriax)) %&gt;% pivot_longer(!month, names_to = &#39;antibiotic&#39;, values_to = &#39;number&#39;) %&gt;% filter(month &lt; &#39;2019-11-01&#39;)
+
+write_csv(all_strataa_prescriptions_g, all_strataa_prescriptions_outhandle)</code></pre>
 </div>
 
 

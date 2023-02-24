@@ -94,6 +94,7 @@ all_strataa_prescriptions <- read_csv(strataa_prescriptions_handle, col_types = 
 the_date <- '2023.02.22'
 qech_pef_by_month_outhandle <- glue('data/{the_date}.qech_pef_results_per_month.csv')
 sequencing_confirmed_typhi_opp_outhandle <- glue('data/{the_date}.sequencing_confirmed_typhi_opp.csv')
+sequencing_confirmed_typhi_all_outhandle <- glue('data/{the_date}.sequencing_confirmed_typhi_all.csv')
 entire_study_period_outhandle <- glue('data/{the_date}.pef_typhi.cases_bc_qrdr_prescrip_microconf.csv')
 strataa_tyvac_qrdr_typhi_outhandle <- glue('data/{the_date}.strataa_tyvac_qrdr_typhi.one_per_patient.csv')
 all_tree_summaries_outhandle <- glue('data/{the_date}.tree_summaries.csv')
@@ -131,7 +132,7 @@ sequencing_confirmed_typhi_opp <-  micro_confirmed_opp %>% filter(!is.na(`Sequen
 sequencing_confirmed_typhi_all <- micro_confirmed_all %>% filter(!is.na(`Sequenced?`) & `overall sequencing identification` == "Typhi")
 
 write_csv(sequencing_confirmed_typhi_opp, sequencing_confirmed_typhi_opp_outhandle)
-
+write_csv(sequencing_confirmed_typhi_all, sequencing_confirmed_typhi_all_outhandle)
 
 
 # can use == 'TyVAC' because the STRATAA/TyVAC ones will be caught in the STRATAA select
